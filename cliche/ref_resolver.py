@@ -1,5 +1,5 @@
 import os
-import json
+import yaml
 import copy
 import hashlib
 import logging
@@ -35,18 +35,10 @@ class JsonLoader(object):
     def load(self, url, base_url=None):
         base_url = base_url or 'file://%s/' % os.path.abspath('.')
         document = self.resolve_ref({'$ref': url}, base_url)
-        return self.descend(document)
-
-    def descend(self, document):
-        if isinstance(document, list):
-            return [self.descend(x) for x in document]
-        if isinstance(document, dict):
-            new = {k: self.descend(v) for k, v in document.iteritems()}
-            return new
         return document
 
     def resolve_ref(self, obj, base_url):
-        url = urlparse.urljoin(base_url, obj['$ref'])
+        url = urlparse.urljoin(base_url, obj.pop('$ref'))
         if url in self.resolved:
             return self.resolved[url]
         if url in self.resolving:
@@ -57,7 +49,8 @@ class JsonLoader(object):
         fragment = copy.deepcopy(self.resolve_pointer(document, pointer))
         try:
             self.verify_checksum(obj.get('checksum'), fragment)
-            result = self.resolve_all(fragment, doc_url)
+            obj.update(fragment)
+            result = self.resolve_all(obj, doc_url)
             self.resolved[url] = result
         finally:
             del self.resolving[url]
@@ -92,7 +85,7 @@ class JsonLoader(object):
         elif scheme == 'file':
             try:
                 with open(path) as fp:
-                    result = json.load(fp)
+                    result = yaml.load(fp)
             except (OSError, IOError) as e:
                 raise RuntimeError(url, cause=e)
         else:
@@ -112,7 +105,7 @@ class JsonLoader(object):
             raise NotImplementedError(
                 'Unsupported hash method: %s' % method
             )
-        normalized = json.dumps(document, sort_keys=True, separators=(',', ':'))
+        normalized = yaml.dumps(document, sort_keys=True, separators=(',', ':'))
         return getattr(hashlib, method)(normalized).hexdigest()
 
     def resolve_pointer(self, document, pointer):
@@ -133,11 +126,11 @@ class JsonLoader(object):
 loader = JsonLoader()
 
 
-def to_json(obj, fp=None):
+def to_yaml(obj, fp=None):
     default = lambda o: (o.__json__() if callable(getattr(o, '__json__', None))
                          else str(o))
     kwargs = dict(default=default, indent=2, sort_keys=True)
-    return json.dump(obj, fp, **kwargs) if fp else json.dumps(obj, **kwargs)
+    return yaml.dump(obj, fp, **kwargs) if fp else yaml.dumps(obj, **kwargs)
 
 
 def from_url(url, base_url=None):
