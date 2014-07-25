@@ -1,0 +1,84 @@
+# ./tmap mapall
+# Well-behaved, but complex (is a pipeline)
+
+job:
+  inputs:
+    reads: reads.fastq
+    stages:
+      - stageId: 1
+        algos:
+          - algo: map1
+            minSeqLen: 20
+          - algo: map2
+            minSeqLen: 20
+      - stageId: 2
+        algos:
+          - algo: map1
+            minSeqLen: 10
+            maxSeqLen: 20
+          - algo: map2
+            minSeqLen: 10
+            maxSeqLen: 20
+
+mixins:
+  global:
+  map1:
+  map2:
+  map3:
+  map4:
+
+algos:
+  map1:
+  map2:
+  map3:
+  map4:
+
+mapall:
+  inputs:
+    type: object
+    required: [stages]
+    properties:
+      $ref: "#properties/global"  # Mixin global options
+      stages:
+        type: array
+        minItems: 1
+        items:
+          type: object
+          required: [stageId, algos]
+          properties:
+            stageId:  # issue: must be unique in array
+              type: integer
+              adapter:
+                prefix: stage
+                order: 0
+                separator: ""
+            stageOption1:  # Not sure what these are
+              type: boolean
+              adapter:
+                prefix: "-n"
+                order: 1
+            algos:
+              type: array
+              minItems: 1
+              items:
+                type: object
+                oneOf:
+                 - $ref: "#algos/map1"
+                 - $ref: "#algos/map2"
+                 - $ref: "#algos/map3"
+                 - $ref: "#algos/map4"
+
+  outputs:
+   type: object
+   required: [sam]
+   properties:
+     sam:
+       type: file
+       adapter:
+         glob: output.sam
+
+  adapter:
+    baseCmd: [tmap, mapall]
+    stdin:
+      valueFrom: "#/inputs/reads"
+    stdout: output.sam
