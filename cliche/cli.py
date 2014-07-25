@@ -1,24 +1,21 @@
-import sys
-from os.path import dirname, join
-import yaml
-from cliche.ref_resolver import JsonLoader
+import os
+from cliche.ref_resolver import from_url
 
 
-def gen_cli(doc):
-    print doc
-    pass
+def gen_cli(tool, job):
+    print tool
+    print job
 
 
-def main(args=None):
-    if args is None:
-        args = sys.argv[1:]
-    for arg in args:
-        doc = yaml.load(arg)
-        loader = JsonLoader()
-        loader.load(doc)
-        print gen_cli(doc)
+def test_bwa_mem():
+    path = os.path.join(os.path.dirname(__file__), '../examples/bwa-mem.yml')
+    doc = from_url(path)
+    tool, job = doc['tool'], doc['job']
+    gen_cli(tool, job)
 
 
-if __name__ == '__main__':
-    #main()
-    main([join(dirname(__file__), '../examples/bwa-mem.yml')])
+def test_tmap_mapall():
+    path = os.path.join(os.path.dirname(__file__), '../examples/tmap.yml')
+    doc = from_url(path)
+    tool, job = doc['mapall'], doc['exampleJob']
+    gen_cli(tool, job)
