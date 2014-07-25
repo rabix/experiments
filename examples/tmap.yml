@@ -1,7 +1,7 @@
 # ./tmap mapall
 # Well-behaved, but complex (is a pipeline)
 
-job:
+exampleJob:
   inputs:
     reads: reads.fastq
     stages:
@@ -16,31 +16,115 @@ job:
           - algo: map1
             minSeqLen: 10
             maxSeqLen: 20
+            seedLength: 16
           - algo: map2
             minSeqLen: 10
             maxSeqLen: 20
+            maxSeedHits: -1
 
 mixins:
   global:
+    reads:
+      type: file
+      required: Yes
+      adapter:
+        streamable: Yes
+        stdin: Yes
+  algoCommon:
+    minSeqLen:
+      type: integer
+      adapter:
+        order: 2
+        prefix: "--min-seq-length"
+    maxSeqLen:
+      type: integer
+      adapter:
+        order: 2
+        prefix: "--max-seq-length"
   map1:
+    $ref: "#mixins/algoCommon"
+    seedLength:
+      type: integer
+      minimum: -1
+      adapter:
+        prefix: "--seed-length"
+        order: 2
   map2:
+    $ref: "#mixins/algoCommon"
+    maxSeedHits:
+      type: integer
+      minimum: -1
+      adapter:
+        prefix: "--max-seed-hits"
+        order: 2
   map3:
+    $ref: "#mixins/algoCommon"
+    fwdSearch:
+      type: boolean
+      adapter:
+        prefix: "--fwd-search"
+        order: 2
   map4:
-
+    $ref: "#mixins/algoCommon"
+    seedStep:
+      type: integer
+      minimum: -1
+      adapter:
+        prefix: "--seed-step"
+        order: 2
+  
 algos:
   map1:
+    type: object
+    required: [algo]
+    properties:
+      algo:
+        type: string
+        enum: [map1]
+        adapter:
+          order: 0
+      $ref: "#mixins/map1"
   map2:
+    type: object
+    required: [algo]
+    properties:
+      algo:
+        type: string
+        enum: [map2]
+        adapter:
+          order: 0
+      $ref: "#mixins/map2"
   map3:
+    type: object
+    required: [algo]
+    properties:
+      algo:
+        type: string
+        enum: [map3]
+        adapter:
+          order: 0
+      $ref: "#mixins/map3"
   map4:
-
+    type: object
+    required: [algo]
+    properties:
+      algo:
+        type: string
+        enum: [map4]
+        adapter:
+          order: 0
+      $ref: "#mixins/map4"
+  
 mapall:
   inputs:
     type: object
     required: [stages]
     properties:
-      $ref: "#properties/global"  # Mixin global options
+      $ref: "#mixins/global"  # Mixin global options
       stages:
         type: array
+        adapter:
+          order: 2
         minItems: 1
         items:
           type: object
@@ -59,6 +143,8 @@ mapall:
                 order: 1
             algos:
               type: array
+              adapter:
+                order: 2
               minItems: 1
               items:
                 type: object
@@ -67,7 +153,7 @@ mapall:
                  - $ref: "#algos/map2"
                  - $ref: "#algos/map3"
                  - $ref: "#algos/map4"
-
+        
   outputs:
    type: object
    required: [sam]
@@ -76,9 +162,9 @@ mapall:
        type: file
        adapter:
          glob: output.sam
-
+         
   adapter:
     baseCmd: [tmap, mapall]
-    stdin:
-      valueFrom: "#/inputs/reads"
     stdout: output.sam
+    
+  

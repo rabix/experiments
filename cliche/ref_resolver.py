@@ -1,4 +1,5 @@
 import os
+import json
 import yaml
 import copy
 import hashlib
@@ -25,7 +26,7 @@ class NormDict(dict):
         return super(NormDict, self).__delitem__(self.normalize(key))
 
 
-class JsonLoader(object):
+class Loader(object):
     def __init__(self):
         normalize = lambda url: urlparse.urlsplit(url).geturl()
         self.fetched = NormDict(normalize)
@@ -34,11 +35,11 @@ class JsonLoader(object):
 
     def load(self, url, base_url=None):
         base_url = base_url or 'file://%s/' % os.path.abspath('.')
-        document = self.resolve_ref({'$ref': url}, base_url)
-        return document
+        return self.resolve_ref({'$ref': url}, base_url)
 
     def resolve_ref(self, obj, base_url):
-        url = urlparse.urljoin(base_url, obj.pop('$ref'))
+        ref, checksum = obj.pop('$ref'), obj.pop('$checksum', None)
+        url = urlparse.urljoin(base_url, ref)
         if url in self.resolved:
             return self.resolved[url]
         if url in self.resolving:
@@ -48,10 +49,10 @@ class JsonLoader(object):
         document = self.fetch(doc_url)
         fragment = copy.deepcopy(self.resolve_pointer(document, pointer))
         try:
-            self.verify_checksum(obj.get('checksum'), fragment)
-            obj.update(fragment)
-            result = self.resolve_all(obj, doc_url)
-            self.resolved[url] = result
+            self.verify_checksum(checksum, fragment)
+            if isinstance(fragment, dict):
+                fragment = dict(obj, **fragment)
+            result = self.resolve_all(fragment, doc_url)
         finally:
             del self.resolving[url]
         return result
@@ -102,10 +103,8 @@ class JsonLoader(object):
 
     def checksum(self, document, method='sha1'):
         if method not in ('md5', 'sha1'):
-            raise NotImplementedError(
-                'Unsupported hash method: %s' % method
-            )
-        normalized = yaml.dumps(document, sort_keys=True, separators=(',', ':'))
+            raise NotImplementedError('Unsupported hash method: %s' % method)
+        normalized = json.dumps(document, sort_keys=True, separators=(',', ':'))
         return getattr(hashlib, method)(normalized).hexdigest()
 
     def resolve_pointer(self, document, pointer):
@@ -123,16 +122,24 @@ class JsonLoader(object):
                 raise ValueError('Unresolvable JSON pointer: %r' % pointer)
         return document
 
-loader = JsonLoader()
+loader = Loader()
 
 
-def to_yaml(obj, fp=None):
+def to_json(obj, fp=None):
     default = lambda o: (o.__json__() if callable(getattr(o, '__json__', None))
                          else str(o))
     kwargs = dict(default=default, indent=2, sort_keys=True)
-    return yaml.dump(obj, fp, **kwargs) if fp else yaml.dumps(obj, **kwargs)
+    return json.dump(obj, fp, **kwargs) if fp else json.dumps(obj, **kwargs)
 
 
 def from_url(url, base_url=None):
     return loader.load(url, base_url)
 
+
+def test_tmap():
+    path = os.path.join(os.path.dirname(__file__), '../examples/tmap.yml')
+    expected_path = os.path.join(os.path.dirname(__file__), '../examples/tmap_resolved.json')
+    doc = loader.load(path)
+    with open(expected_path) as fp:
+        expected = json.load(fp)
+    assert doc == expected
