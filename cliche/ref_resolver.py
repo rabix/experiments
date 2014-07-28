@@ -47,7 +47,7 @@ class Loader(object):
         self.resolving[url] = True
         doc_url, pointer = urlparse.urldefrag(url)
         document = self.fetch(doc_url)
-        fragment = copy.deepcopy(self.resolve_pointer(document, pointer))
+        fragment = copy.deepcopy(resolve_pointer(document, pointer))
         try:
             self.verify_checksum(checksum, fragment)
             if isinstance(fragment, dict):
@@ -105,22 +105,24 @@ class Loader(object):
         if method not in ('md5', 'sha1'):
             raise NotImplementedError('Unsupported hash method: %s' % method)
         normalized = json.dumps(document, sort_keys=True, separators=(',', ':'))
-        return getattr(hashlib, method)(normalized).hexdigest()
+        return getattr(hashlib, method)(normalized).hexdigest
 
-    def resolve_pointer(self, document, pointer):
-        parts = urlparse.unquote(pointer.lstrip('/')).split('/') \
-            if pointer else []
-        for part in parts:
-            if isinstance(document, collections.Sequence):
-                try:
-                    part = int(part)
-                except ValueError:
-                    pass
+
+def resolve_pointer(document, pointer):
+    parts = urlparse.unquote(pointer.lstrip('/')).split('/') \
+        if pointer else []
+    for part in parts:
+        if isinstance(document, collections.Sequence):
             try:
-                document = document[part]
-            except:
-                raise ValueError('Unresolvable JSON pointer: %r' % pointer)
-        return document
+                part = int(part)
+            except ValueError:
+                pass
+        try:
+            document = document[part]
+        except:
+            raise ValueError('Unresolvable JSON pointer: %r' % pointer)
+    return document
+
 
 loader = Loader()
 
