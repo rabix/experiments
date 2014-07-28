@@ -112,6 +112,7 @@ def resolve_pointer(document, pointer):
     parts = urlparse.unquote(pointer.lstrip('/')).split('/') \
         if pointer else []
     for part in parts:
+        print part
         if isinstance(document, collections.Sequence):
             try:
                 part = int(part)

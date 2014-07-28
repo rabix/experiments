@@ -22,7 +22,7 @@ class Argument(object):
     def bind(self, job):
         value_from = self.arg.get('valueFrom')
         if value_from:
-            return resolve_pointer(job, value_from)
+            return resolve_pointer(job, value_from[1:])
 
     @property
     def weight(self):
@@ -33,7 +33,11 @@ class Adapter(object):
 
     def __init__(self, tool):
         self.tool = tool
-        self.args = [Argument(arg) for arg in tool['adapter']['args']]
+        self.args = []
+        
+        if tool['adapter'].get('args'):
+	  self.args += [Argument(arg) for arg in tool['adapter']['args']]
+        
         self.args += [Argument.from_input(*input)
                       for input in tool['inputs']['properties'].iteritems()
                       if input[1].get('adapter')]
