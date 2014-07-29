@@ -24,8 +24,8 @@ class Argument(object):
             self.value = resolve_pointer(job, value_from[1:], None)
 
     def cli(self):
-        return (self.arg.get('prefix', '') +
-                self.arg.get('separator', ' ') +
+        return ((self.arg.get('prefix', None) or '') +
+                (self.arg.get('separator', None) or ' ') +
                 str(self.value))
 
     @property
@@ -57,7 +57,6 @@ class Adapter(object):
             arg.bind(job)
             if arg.value is not None:
                 cli += arg.cli() + ' '
-
         return cli
 
 
@@ -70,11 +69,13 @@ def test_bwa_mem():
     path = os.path.join(os.path.dirname(__file__), '../examples/bwa-mem.yml')
     doc = from_url(path)
     tool, job = doc['tool'], doc['job']
-    print gen_cli(tool, job)
+    cli = gen_cli(tool, job)
+    print cli
 
 
 def test_tmap_mapall():
     path = os.path.join(os.path.dirname(__file__), '../examples/tmap.yml')
     doc = from_url(path)
     tool, job = doc['mapall'], doc['exampleJob']
-    print gen_cli(tool, job)
+    cli = gen_cli(tool, job)
+    print cli
