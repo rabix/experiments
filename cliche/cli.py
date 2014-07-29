@@ -1,5 +1,4 @@
 import os
-from collections import defaultdict
 
 from cliche.ref_resolver import from_url, resolve_pointer
 
@@ -22,7 +21,12 @@ class Argument(object):
     def bind(self, job):
         value_from = self.arg.get('valueFrom')
         if value_from:
-            return resolve_pointer(job, value_from[1:])
+            self.value = resolve_pointer(job, value_from[1:], None)
+
+    def cli(self):
+        return (self.arg.get('prefix', '') +
+                self.arg.get('separator', ' ') +
+                str(self.value))
 
     @property
     def weight(self):
@@ -36,7 +40,7 @@ class Adapter(object):
         self.args = []
         
         if tool['adapter'].get('args'):
-	  self.args += [Argument(arg) for arg in tool['adapter']['args']]
+            self.args += [Argument(arg) for arg in tool['adapter']['args']]
         
         self.args += [Argument.from_input(*input)
                       for input in tool['inputs']['properties'].iteritems()
@@ -44,10 +48,17 @@ class Adapter(object):
         sorted(self.args, key=lambda a: a.weight)
 
     def cli(self, job):
+        for req in self.tool['inputs']['required']:
+            if not req in job['inputs']:
+                raise RuntimeError("Required input not provided: " + req)
+
+        cli = ""
         for arg in self.args:
             arg.bind(job)
-        return ""
+            if arg.value is not None:
+                cli += arg.cli() + ' '
 
+        return cli
 
 
 def gen_cli(tool, job):
@@ -59,11 +70,11 @@ def test_bwa_mem():
     path = os.path.join(os.path.dirname(__file__), '../examples/bwa-mem.yml')
     doc = from_url(path)
     tool, job = doc['tool'], doc['job']
-    gen_cli(tool, job)
+    print gen_cli(tool, job)
 
 
 def test_tmap_mapall():
     path = os.path.join(os.path.dirname(__file__), '../examples/tmap.yml')
     doc = from_url(path)
     tool, job = doc['mapall'], doc['exampleJob']
-    gen_cli(tool, job)
+    print gen_cli(tool, job)

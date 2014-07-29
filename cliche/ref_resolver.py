@@ -108,11 +108,13 @@ class Loader(object):
         return getattr(hashlib, method)(normalized).hexdigest
 
 
-def resolve_pointer(document, pointer):
+POINTER_DEFAULT = object()
+
+
+def resolve_pointer(document, pointer, default=POINTER_DEFAULT):
     parts = urlparse.unquote(pointer.lstrip('/')).split('/') \
         if pointer else []
     for part in parts:
-        print part
         if isinstance(document, collections.Sequence):
             try:
                 part = int(part)
@@ -121,7 +123,10 @@ def resolve_pointer(document, pointer):
         try:
             document = document[part]
         except:
-            raise ValueError('Unresolvable JSON pointer: %r' % pointer)
+            if default != POINTER_DEFAULT:
+                return default
+            else:
+                raise ValueError('Unresolvable JSON pointer: %r' % pointer)
     return document
 
 
