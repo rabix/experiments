@@ -3,7 +3,8 @@
 
 exampleJob:
   inputs:
-    reads: reads.fastq
+    reads:
+      path: reads.fastq
     stages:
       - stageId: 1
         algos:
