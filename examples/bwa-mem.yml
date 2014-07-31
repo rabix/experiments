@@ -70,7 +70,6 @@ tool:
         items:
           type: file
           adapter:
-            order: 3
             streamable: Yes
       minimum_seed_length:
         type: integer
@@ -108,19 +107,6 @@ tool:
       - order: 1
         prefix: "-t"
         valueFrom: "#allocatedResources/cpu"
-      - order: 3
-        valueFrom: "#inputs/reads"
-        listSeparator:  # blank for null, which defaults to arg for each
-        prefix: # blank; positional argument
-        streamable: Yes
-        transform: #blank, just pass file name; this is default
-      - order: 2
-        valueFrom: "#inputs/reference"
-        listSeparator: #blank, not a list.
-        prefix: #blank, positional, this is default
-        streamable: No
-        type: file
-        transform: "strip_ext"  # Short for http://example.org/transforms#strip_ext
     outputs:
       sam:
         streamable: Yes
