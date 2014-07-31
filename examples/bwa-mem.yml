@@ -119,6 +119,7 @@ tool:
         listSeparator: #blank, not a list.
         prefix: #blank, positional, this is default
         streamable: No
+        type: file
         transform: "strip_ext"  # Short for http://example.org/transforms#strip_ext
     outputs:
       sam:

@@ -6,6 +6,26 @@ from cliche.ref_resolver import from_url, resolve_pointer
 # TODO: lists, transforms
 
 
+ARGUMENT_TYPES = {}
+
+
+def make_argument(arg, input_name=None):
+    arg_class = ARGUMENT_TYPES.get(arg.get('type'), Argument)
+
+    if input_name:
+        adapter_arg = arg.get('adapter')
+        if adapter_arg:
+            arg_class = ARGUMENT_TYPES.get(adapter_arg.get('type'), Argument)
+            adapter_arg = dict(arg)
+            adapter_arg['valueFrom'] = "#inputs/" + input_name
+            adapter_arg['type'] = arg['type']
+            adapter_arg['transform'] = arg.get('transform')
+        else:
+            return None
+
+    return arg_class(arg)
+
+
 class Argument(object):
     def __init__(self, arg):
         self.arg = arg
@@ -13,20 +33,6 @@ class Argument(object):
         self.transforms = {
             'strip_ext': lambda x: splitext(x)[0]
         }
-        self.types = {
-            'file': lambda val: val['path']
-        }
-
-    @classmethod
-    def from_input(cls, name, input):
-        arg = input.get('adapter')
-        if arg:
-            arg = dict(arg)
-            arg['valueFrom'] = "#inputs/" + name
-            arg['type'] = input['type']
-            arg['transform'] = input.get('transform')
-            return cls(arg)
-        return None
 
     def bind(self, job):
         value_from = self.arg.get('valueFrom')
@@ -34,12 +40,9 @@ class Argument(object):
             self.value = resolve_pointer(job, value_from[1:], None)
         return self
 
-    def cli(self):
-        type_func = self.types.get(self.arg.get('type'), str)
-        transform = self.transforms.get(self.arg.get('transform'), lambda x: x)
-        prefix = self.arg.get('prefix') or ''
-        separator = self.arg.get('separator') or ' '
-        value = transform(type_func(self.value))
+    def _cli(self, prefix, separator, value):
+        transform = self.transforms.get(self.arg.get('transform'), str)
+        value = transform(value)
 
         if separator != ' ':
             return [prefix + separator + value]
@@ -49,9 +52,32 @@ class Argument(object):
 
         return [value]
 
+    def cli(self):
+        return self._cli(self.prefix, self.separator, self.value)
+
     @property
     def weight(self):
         return self.arg.get('order', 99)
+
+    @property
+    def prefix(self):
+        return self.arg.get('prefix') or ''
+
+    @property
+    def separator(self):
+        return self.arg.get('separator') or ' '
+
+
+class FileArgument(Argument):
+    def __init__(self, arg):
+        super(FileArgument, self).__init__(arg)
+
+    def cli(self):
+        return super(FileArgument, self)._cli(self.prefix,
+                                       self.separator,
+                                       self.value['path'])
+
+ARGUMENT_TYPES['file'] = FileArgument
 
 
 class ArrayArgument(Argument):
@@ -61,25 +87,36 @@ class ArrayArgument(Argument):
     def cli(self):
         list_separator = self.arg.get('listSeparator')
         if list_separator:
-            item_arg = Argument(self.arg['items'])
+            item_arg = make_argument(self.arg['items'])
             values = []
             for val in self.value:
                 item_arg.value = val
                 values += item_arg.cli()
 
-            self.value = list_separator.join(values)
-            return super(ArrayArgument, self).cli()
+            return self._cli(self.prefix,
+                             self.separator,
+                             list_separator.join(values))
         else:
             items = self.arg['items']
             items['prefix'] = self.arg.get('prefix')
             items['separator'] = self.arg.get('separator')
-            item_arg = Argument(items)
+            item_arg = make_argument(items)
             values = []
             for val in self.value:
                 item_arg.value = val
                 values += item_arg.cli()
 
             return values
+
+ARGUMENT_TYPES['array'] = ArrayArgument
+
+
+class ObjectArgument(Argument):
+
+    def __init__(self, tool):
+        super(ObjectArgument, self).__init__(tool)
+
+ARGUMENT_TYPES['object'] = ObjectArgument
 
 
 class Adapter(object):
@@ -88,11 +125,12 @@ class Adapter(object):
         self.args = []
 
         if tool['adapter'].get('args'):
-            self.args += [Argument(arg) for arg in tool['adapter']['args']]
+            self.args += [make_argument(arg) for arg in tool['adapter']['args']]
 
-        self.args += [Argument.from_input(*input)
-                      for input in tool['inputs']['properties'].iteritems()
-                      if input[1].get('adapter')]
+        self.args += [make_argument(input_spec, input_name)
+                      for input_name, input_spec
+                      in tool['inputs']['properties'].iteritems()
+                      if input_spec.get('adapter')]
         sorted(self.args, key=lambda a: a.weight)
 
     def cli(self, job):
@@ -113,7 +151,7 @@ def gen_cli(tool, job):
     return a.cli(job)
 
 
-## Here be tests
+# # Here be tests
 from copy import deepcopy
 from nose.tools import eq_
 
@@ -131,45 +169,45 @@ TOOL_STUB = {
 
 
 def test_simple_argument():
-    arg = Argument({'order': 1, 'value': 5})
+    arg = make_argument({'order': 1, 'value': 5})
     eq_(arg.cli(), ['5'])
 
 
 def test_ref_argument():
-    arg = Argument({'order': 1, 'valueFrom': '#ref'})
+    arg = make_argument({'order': 1, 'valueFrom': '#ref'})
     arg.bind({'ref': 'value'})
     eq_(arg.cli(), ['value'])
 
 
 def test_argument_separator():
-    arg = Argument({'order': 1, 'value': 'str', 'prefix': '-x'})
+    arg = make_argument({'order': 1, 'value': 'str', 'prefix': '-x'})
     eq_(arg.cli(), ['-x', 'str'])
 
-    arg = Argument({'value': 'str', 'prefix': '-x', 'separator': '='})
+    arg = make_argument({'value': 'str', 'prefix': '-x', 'separator': '='})
     eq_(arg.cli(), ['-x=str'])
 
 
 def test_argument_transform():
-    arg = Argument({'value': 'str.ext',
-                    'transform': 'strip_ext'})
+    arg = make_argument({'value': 'str.ext',
+                         'transform': 'strip_ext'})
     eq_(arg.cli(), ['str'])
 
 
 def test_file_argument():
-    arg = Argument({'value': {'path': 'a/path'},
-                    'type': 'file'})
+    arg = make_argument({'value': {'path': 'a/path'},
+                         'type': 'file'})
     eq_(arg.cli(), ['a/path'])
 
 
 def test_list_argument():
-    arg = ArrayArgument({'value': [1, 2, 3],
+    arg = make_argument({'value': [1, 2, 3],
                          'prefix': '-x',
                          'type': 'array',
                          'items': {'type': 'number'}
     })
     eq_(arg.cli(), ['-x', '1', '-x', '2', '-x', '3'])
 
-    arg = ArrayArgument({'value': [1, 2, 3],
+    arg = make_argument({'value': [1, 2, 3],
                          'prefix': '-x',
                          'type': 'array',
                          'items': {'type': 'number'},
@@ -179,7 +217,7 @@ def test_list_argument():
 
 
 def test_list_argument_file_transform():
-    arg = ArrayArgument({'value': [{'path': 'a/b.txt'}, {'path': 'c/d.txt'}],
+    arg = make_argument({'value': [{'path': 'a/b.txt'}, {'path': 'c/d.txt'}],
                          'prefix': '-x',
                          'type': 'array',
                          'items': {'type': 'file', 'transform': 'strip_ext'}
@@ -199,4 +237,3 @@ def test_tmap_mapall():
     doc = from_url(path)
     tool, job = doc['mapall'], doc['exampleJob']
     print gen_cli(tool, job)
-
