@@ -69,7 +69,8 @@ class InputArgument(Argument):
         self.name = name
 
     def bind(self, job):
-        self.value = resolve_pointer(job, "inputs/" + self.name, None)
+        if not self.value:
+            self.value = resolve_pointer(job, "inputs/" + self.name, None)
         return self
 
 
@@ -121,12 +122,18 @@ ARGUMENT_TYPES['array'] = ArrayArgument
 class ObjectArgument(InputArgument):
 
     def __init__(self, name, schema):
-        super(ObjectArgument, self).__init__(name, schema)
+        self.schemas.append(super(ObjectArgument, self).__init__(name, schema))
+        if schema.get('properties'):
+            pass
+        elif schema.get('oneOf'):
+            pass
+        else:
+            raise RuntimeError('Invalid object type')
 
     def cli(self):
         [make_argument(input_spec, input_name)
-                      for input_name, input_spec
-                      in self.schema['properties'].iteritems()]
+         for input_name, input_spec
+         in self.schema['properties'].iteritems()]
         pass
 ARGUMENT_TYPES['object'] = ObjectArgument
 
