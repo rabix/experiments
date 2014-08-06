@@ -15,10 +15,10 @@ def make_argument(arg, input_name=None):
         arg_class = ARGUMENT_TYPES.get(arg.get('type'), InputArgument)
         return arg_class(input_name, arg)
     else:
-        return Argument(arg)
+        return ArgumentAdapter(arg)
 
 
-class Argument(object):
+class ArgumentAdapter(object):
     def __init__(self, adapter):
         self.adapter = adapter
         self.value = adapter.get('value')
@@ -60,7 +60,14 @@ class Argument(object):
         return self.adapter.get('separator') or ' '
 
 
-class InputArgument(Argument):
+class ObjectHandler(object):
+
+    def __init__(self, name, schema):
+        self.name = name
+        self.schema = schema
+
+
+class InputArgument(ArgumentAdapter):
 
     def __init__(self, name, schema):
         adapter = schema.get('adapter', {})
@@ -91,7 +98,7 @@ class ArrayArgument(InputArgument):
         super(ArrayArgument, self).__init__(name, schema)
 
     def cli(self):
-        list_separator = self.adapter.get('listSeparator')
+        list_separator = self.adapter.get('item_separator')
         if list_separator:
             item_arg = make_argument(self.schema['items'], 'name')
             values = []
@@ -226,7 +233,7 @@ def test_list_argument():
 
     arg = make_argument({'type': 'array',
                          'items': {'type': 'number'},
-                         'adapter': {'prefix': '-x', 'listSeparator': ','}
+                         'adapter': {'prefix': '-x', 'item_separator': ','}
                          }, 'ref')
     arg.bind({'inputs': {'ref': [1, 2, 3]}})
     eq_(arg.cli(), ['-x', '1,2,3'])

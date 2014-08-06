@@ -1,0 +1,145 @@
+{
+    "definitions": {
+        "inputAdapter": {
+          "type": "object"
+        }
+    }
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "id": "http://example.org/tool",
+    "description": "Common workflow tool description schema",
+    "type": "object",
+    "properties": {
+        "adapter": {
+            "type": "object",
+            "properties": {
+                "args": {
+                    "type": "array",
+                    "items": [
+                        {
+                            "type": "object",
+                            "properties": {
+                                "order": {
+                                    "type": "number"
+                                },
+                                "value": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        {
+                            "type": "object",
+                            "properties": {
+                                "order": {
+                                    "type": "number"
+                                },
+                                "prefix": {
+                                    "type": "string"
+                                },
+                                "valueFrom": {
+                                    "type": "string",
+                                    "format": "url"
+                                }
+                            }
+                        }
+                    ]
+                },
+                "baseCmd": {
+                    "type": {"$ref": "http://json-schema.org/draft-04/schema#/definitions/stringArray"}
+                },
+                "outputs": {
+                    "type": "object",
+                    "properties": {
+                        "sam": {
+                            "type": "object",
+                            "properties": {
+                                "glob": {
+                                    "type": "string"
+                                },
+                                "streamable": {
+                                    "type": "boolean"
+                                }
+                            }
+                        }
+                    }
+                },
+                "stdout": {
+                    "type": "string"
+                }
+            }
+        },
+        "documentAuthor": {
+            "type": "string"
+        },
+        "inputs": {
+            "type": "object",
+            "allOf": [
+                { "$ref": "http://json-schema.org/draft-04/schema#" },
+                { "$ref": "#definitions/inputAdapter" }
+            ]
+            
+        },
+        "outputs": {
+            "type": "object",
+            "allOf": [
+                { "$ref": "http://json-schema.org/draft-04/schema#" },
+                { "$ref": "#definitions/outputAdapter" }
+            ]
+        },
+        "requirements": {
+            "type": "object",
+            "id": "http://jsonschema.net/requirements",
+            "required": false,
+            "properties": {
+                "environment": {
+                    "type": "object",
+                    "properties": {
+                        "container": {
+                            "type": "object",
+                            "properties": {
+                                "imageId": {
+                                    "type": "string"
+                                },
+                                "type": {
+                                    "type": "string"
+                                },
+                                "uri": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                },
+                "platformFeatures": {
+                    "type": "array",
+                    "items": { "$ref": "http://json-schema.org/draft-04/schema#definitions/stringArray" }
+                },
+                "resources": {
+                    "type": "object",
+                    "properties": {
+                        "cpu": {
+                            "type": "number"
+                        },
+                        "diskSpace": {
+                            "type": "number"
+                        },
+                        "mem": {
+                            "type": "number"
+                        },
+                        "network": {
+                            "type": "boolean"
+                        },
+                        "ports": {
+                            "type": "array",
+                            "items": {
+                                "type": "integer"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "softwareDescription": {
+            "type": "object"
+        }
+    }
+}
