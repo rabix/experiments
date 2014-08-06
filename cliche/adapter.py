@@ -33,12 +33,24 @@ class Argument(object):
     def __unicode__(self):
         return unicode(self.value)
 
+    def get_args_and_stdin(self, adapter_mixins=None):
+        args = [Argument(v, self.schema.get('properties', {}).get(k)) for k, v in self.value.iteritems()]
+        args += adapter_mixins or []
+        args.sort(key=lambda x: x.position)
+        stdin = [a.value for a in args if a.is_stdin()]
+        return reduce(operator.add, [a.arg_list() for a in args], []), stdin[0] if stdin else None
+
     def arg_list(self):
+        if self.is_stdin():
+            return []
         if isinstance(self.value, dict):
             return self._as_dict()
         if isinstance(self.value, list):
             return self._as_list()
         return self._as_primitive()
+
+    def is_stdin(self):
+        return self.adapter.get('stdin')
 
     def _as_primitive(self):
         if self.value in (None, False):
@@ -51,10 +63,8 @@ class Argument(object):
             return [self.prefix] if self.value is True else [self.prefix, self.value]
         return [self.prefix + self.separator + unicode(self.value)]
 
-    def _as_dict(self, extend_with=None):
+    def _as_dict(self):
         args = [Argument(v, self.schema.get('properties', {}).get(k)) for k, v in self.value.iteritems()]
-        if extend_with:
-            args += extend_with
         args.sort(key=lambda x: x.position)
         return reduce(operator.add, [a.arg_list() for a in args], [])
 
@@ -87,12 +97,40 @@ class Argument(object):
         raise Exception('No options valid for supplied value.')
 
 
+class Adapter(object):
+    def __init__(self, tool):
+        self.tool = tool
+        self.adapter = tool.get('adapter', {})
+        self.base_cmd = self.adapter.get('baseCmd', [])
+        if isinstance(self.base_cmd, basestring):
+            self.base_cmd = self.base_cmd.split(' ')
+        self.stdout = self.adapter.get('stdout')
+        self.args = self.adapter.get('args', [])
+        self.input_schema = self.tool.get('inputs')
+        self.output_schema = self.tool.get('outputs')
+
+    def _arg_list_and_stdin(self, job):
+        adapter_args = [Argument(self._get_value(a, job), {}, a) for a in self.args]
+        return Argument(job['inputs'], self.input_schema).get_args_and_stdin(adapter_args)
+
+    def cmd_line(self, job):
+        arg_list, stdin = self._arg_list_and_stdin(job)
+        stdin = ['<', stdin] if stdin else []
+        stdout = ['>', self.stdout] if self.stdout else []
+        return ' '.join(map(unicode, arg_list) + stdin + stdout)
+
+    def _get_value(self, arg, job):
+        if arg.get('value') is not None:
+            return arg['value']
+        if 'valueFrom' not in arg:
+            raise Exception('No way to get value for arg %s' % arg)
+        return resolve_pointer(job, arg['valueFrom'], None)
+
 if __name__ == '__main__':
     path = os.path.join(os.path.dirname(__file__), '../examples/tmap.yml')
     doc = from_url(path)
     tool, job = doc['mapall'], doc['exampleJob']
-    print Argument(job['inputs'], tool['inputs']).arg_list() # .as_dict(extend_with=)
-
+    print Adapter(tool).cmd_line(job)
 
 
 
