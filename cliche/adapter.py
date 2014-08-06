@@ -21,9 +21,9 @@ class Argument(object):
         self.separator = self.adapter.get('separator')
         if self.separator == ' ':
             self.separator = None
-        self.item_separator = self.adapter.get('item_separator', ',')
+        self.item_separator = self.adapter.get('itemSeparator', ',')
         self.transform = self.adapter.get('transform')
-        if self.schema['type'] in ('file', 'directory'):
+        if self.schema.get('type') in ('file', 'directory'):
             value = value['path']  # FIXME
         self.value = self.TRANSFORMS.get(self.transform, lambda x: x)(value)
 
@@ -73,10 +73,15 @@ class Argument(object):
         args = [Argument(item, item_schema) for item in self.value]
         if not self.prefix:
             return reduce(operator.add, [a.arg_list() for a in args], [])
-        if not self.separator:
+        if not self.separator and not self.item_separator:
             return reduce(operator.add, [[self.prefix] + a.arg_list() for a in args], [])
+        if self.separator and not self.item_separator:
+            return [self.prefix + self.separator + a._list_item() for a in args if a._list_item() is not None]
         args_as_strings = [a._list_item() for a in args if a._list_item() is not None]
-        return [self.prefix + self.separator + self.item_separator.join(args_as_strings)]
+        joined = self.item_separator.join(args_as_strings)
+        if not self.separator and self.item_separator:
+            return [self.prefix, joined]
+        return [self.prefix + self.separator + joined]
 
     def _list_item(self):
         as_arg_list = self.arg_list()
@@ -117,7 +122,7 @@ class Adapter(object):
         arg_list, stdin = self._arg_list_and_stdin(job)
         stdin = ['<', stdin] if stdin else []
         stdout = ['>', self.stdout] if self.stdout else []
-        return ' '.join(map(unicode, arg_list) + stdin + stdout)
+        return ' '.join(map(unicode, self.base_cmd + arg_list + stdin + stdout))
 
     def _get_value(self, arg, job):
         if arg.get('value') is not None:
@@ -126,11 +131,16 @@ class Adapter(object):
             raise Exception('No way to get value for arg %s' % arg)
         return resolve_pointer(job, arg['valueFrom'], None)
 
+
+def cmd_line(doc_path, tool_key='tool', job_key='job'):
+    doc = from_url(doc_path)
+    tool, job = doc[tool_key], doc[job_key]
+    return Adapter(tool).cmd_line(job)
+
+
 if __name__ == '__main__':
-    path = os.path.join(os.path.dirname(__file__), '../examples/tmap.yml')
-    doc = from_url(path)
-    tool, job = doc['mapall'], doc['exampleJob']
-    print Adapter(tool).cmd_line(job)
+    print cmd_line(os.path.join(os.path.dirname(__file__), '../examples/tmap.yml'), 'mapall', 'exampleJob')
+    print cmd_line(os.path.join(os.path.dirname(__file__), '../examples/bwa-mem.yml'))
 
 
 

@@ -86,7 +86,7 @@ tool:
         adapter:
           order: 1
           prefix: "-I"
-          listSeparator: ","
+          itemSeparator: ","
   outputs:
     type: object
     required: [sam]
@@ -97,10 +97,8 @@ tool:
           glob: output.sam
           streamable: Yes
   adapter:
-    baseCmd: [bwa]  # For simplicity, this could be [bwa, mem]
+    baseCmd: bwa  # For simplicity, this could be [bwa, mem]
     stdout: output.sam  # Would be awesome to have expressions here
-    stdin: #blank, unused
-    stderr: #blank, unused
     args:
       - order: 0
         value: mem
