@@ -38,7 +38,7 @@ job:
 
 # Tool
 tool:
-  softwareDescription: # DOAP or somesuch
+  softwareDescription: {}
   documentAuthor: # Who wrapped it
   requirements:
     environment:

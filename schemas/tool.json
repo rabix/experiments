@@ -1,12 +1,71 @@
 {
-    "definitions": {
-        "inputAdapter": {
-          "type": "object"
-        }
-    }
     "$schema": "http://json-schema.org/draft-04/schema#",
     "id": "http://example.org/tool",
     "description": "Common workflow tool description schema",
+    
+    "definitions": {
+        "file": {
+          "type": "object",
+          "properties": {
+            "path": { "type": "string" },
+            "size": { "type": "number" },
+            "checksum": { "type": "string" },
+            "secondaryFiles": {
+              "type": "array",
+              "items": { "$ref": "#definitions/file" }}
+          }
+        },
+        "inputAdapter": {
+          "type": "object",
+          "properties": {
+            "adapter": {
+              "type": "object",
+              "properties": {
+                "prefix": { "type": "string" },
+                "order": { "type": "integer" },
+                "separator": { "type": "string" },
+                "itemSeparator": { "type": "string" },
+                "streamable": { "type": "boolean" },
+                "value": { }
+              }
+            },
+            "additionalProperties": {}
+          }
+        },
+        "outputAdapter": {
+          "type": "object",
+          "properties": {
+            "glob": { "type": "string" },
+            "streamable": { "type": "boolean" }
+          }
+        },
+        "inputSchemaPatch": {
+          "type": "object",
+          "properties": {
+            "properties": {
+              "anyOf": [
+                { "$ref": "http://json-schema.org/draft-04/schema#" },
+                { "$ref": "#definitions/inputAdapter" }
+              ],
+              "default": {}
+            },
+            "items": {
+              "anyOf": [
+                { "$ref": "http://json-schema.org/draft-04/schema#" },
+                { "$ref": "#definitions/inputAdapter" }
+              ],
+              "default": {}
+            }
+          }
+        },
+        "augumentedInputsSchema": {
+          "anyOf": [
+            { "$ref": "http://json-schema.org/draft-04/schema#" },
+            { "$ref": "#definitions/inputSchemaPatch" }
+          ]
+        }
+    },
+    
     "type": "object",
     "properties": {
         "adapter": {
@@ -14,37 +73,24 @@
             "properties": {
                 "args": {
                     "type": "array",
-                    "items": [
-                        {
-                            "type": "object",
-                            "properties": {
-                                "order": {
-                                    "type": "number"
-                                },
-                                "value": {
-                                    "type": "string"
-                                }
-                            }
-                        },
-                        {
-                            "type": "object",
-                            "properties": {
-                                "order": {
-                                    "type": "number"
-                                },
-                                "prefix": {
-                                    "type": "string"
-                                },
-                                "valueFrom": {
-                                    "type": "string",
-                                    "format": "url"
-                                }
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "order": {
+                                "type": "number"
+                            },
+                            "value": {
+                                "type": "string"
+                            },
+                            "valueFrom": {
+                                "type": "string",
+                                "format": "url"
                             }
                         }
-                    ]
+                    }
                 },
                 "baseCmd": {
-                    "type": {"$ref": "http://json-schema.org/draft-04/schema#/definitions/stringArray"}
+                    "$ref": "http://json-schema.org/draft-04/schema#definitions/stringArray"
                 },
                 "outputs": {
                     "type": "object",
@@ -70,14 +116,7 @@
         "documentAuthor": {
             "type": "string"
         },
-        "inputs": {
-            "type": "object",
-            "allOf": [
-                { "$ref": "http://json-schema.org/draft-04/schema#" },
-                { "$ref": "#definitions/inputAdapter" }
-            ]
-            
-        },
+        "inputs": { "$ref": "#definitions/augumentedInputsSchema" },
         "outputs": {
             "type": "object",
             "allOf": [
@@ -87,8 +126,6 @@
         },
         "requirements": {
             "type": "object",
-            "id": "http://jsonschema.net/requirements",
-            "required": false,
             "properties": {
                 "environment": {
                     "type": "object",
@@ -110,29 +147,33 @@
                     }
                 },
                 "platformFeatures": {
-                    "type": "array",
-                    "items": { "$ref": "http://json-schema.org/draft-04/schema#definitions/stringArray" }
+                  "$ref": "http://json-schema.org/draft-04/schema#definitions/stringArray"
                 },
                 "resources": {
                     "type": "object",
                     "properties": {
                         "cpu": {
-                            "type": "number"
+                            "type": ["number", "null"]
                         },
                         "diskSpace": {
-                            "type": "number"
+                            "type": ["number", "null"]
                         },
                         "mem": {
-                            "type": "number"
+                            "type": ["number", "null"]
                         },
                         "network": {
-                            "type": "boolean"
+                            "type": ["boolean", "null"]
                         },
                         "ports": {
-                            "type": "array",
-                            "items": {
-                                "type": "integer"
-                            }
+                            "anyOf": [
+                              {
+                                "type": "array",
+                                "items": {
+                                  "type": "integer"
+                                }
+                              },
+                              {"type": "null"}
+                             ]
                         }
                     }
                 }
