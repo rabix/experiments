@@ -6,6 +6,7 @@
     "definitions": {
         "file": {
           "type": "object",
+          "required": ["path"]
           "properties": {
             "path": { "type": "string" },
             "size": { "type": "number" },
@@ -153,27 +154,22 @@
                     "type": "object",
                     "properties": {
                         "cpu": {
-                            "type": ["number", "null"]
+                            "type": "number"
                         },
                         "diskSpace": {
-                            "type": ["number", "null"]
+                            "type": "number"
                         },
                         "mem": {
-                            "type": ["number", "null"]
+                            "type": "number"
                         },
                         "network": {
-                            "type": ["boolean", "null"]
+                            "type": "boolean"
                         },
                         "ports": {
-                            "anyOf": [
-                              {
-                                "type": "array",
-                                "items": {
-                                  "type": "integer"
-                                }
-                              },
-                              {"type": "null"}
-                             ]
+                            "type": "array",
+                            "items": {
+                              "type": "integer"
+                            } 
                         }
                     }
                 }

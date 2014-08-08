@@ -1,5 +1,6 @@
 import sys
 import json
+import yaml
 
 from os.path import dirname, join
 
@@ -17,11 +18,26 @@ def validate_tool(tool):
     validate(tool, tool_schema)
 
 
+def validate_job_inputs(job, tool):
+    validate(job['inputs'], tool['inputs'])
+
+
+def clean_none(d):
+    return {k: v for k, v in d.iteritems() if v is not None}
+
+
+def load_tool(path):
+    with open(path) as f:
+        tool = clean_none(yaml.load(f))
+    return tool
+
+
 def main(args=None):
     if args is None:
         args = sys.argv
     for f in args:
-        validate_schema(json.load(open(f)))
+        tool = load_tool(f)
+        validate_tool(tool)
 
 if __name__ == "__main__":
     main()
