@@ -13,9 +13,10 @@ class Argument(object):
 
     def __init__(self, value, schema, adapter=None):
         self.schema = schema or {}
-        if 'oneOf' in schema:
+        if 'oneOf' in self.schema:
             self.schema = self._schema_from_opts(schema['oneOf'], value)
-        self.adapter = adapter or schema.get('adapter', {})
+        # FIXME: allOf
+        self.adapter = adapter or self.schema.get('adapter', {})
         self.position = self.adapter.get('order', 99)
         self.prefix = self.adapter.get('prefix')
         self.separator = self.adapter.get('separator')
@@ -139,9 +140,8 @@ def cmd_line(doc_path, tool_key='tool', job_key='job'):
 
 
 if __name__ == '__main__':
-    print cmd_line(os.path.join(os.path.dirname(__file__), '../examples/tmap.yml'), 'mapall', 'exampleJob')
-    print cmd_line(os.path.join(os.path.dirname(__file__), '../examples/bwa-mem.yml'))
-
-
-
-
+    tool = from_url('examples/tmap-tool.yml')
+    job = from_url('examples/tmap-job.yml')
+    print tool
+    print job
+    print Adapter(tool).cmd_line(job)

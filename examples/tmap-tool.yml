@@ -1,0 +1,150 @@
+definitions:
+  globalOptions:
+    type: object
+    properties:
+        reads:
+          type: file
+          required: Yes
+          adapter:
+            streamable: Yes
+            stdin: Yes
+  algoCommonOptions:
+    type: object
+    properties:
+        minSeqLen:
+          type: integer
+          adapter:
+            order: 2
+            prefix: "--min-seq-length"
+        maxSeqLen:
+          type: integer
+          adapter:
+            order: 2
+            prefix: "--max-seq-length"
+  map1Options:
+    type: object
+    required: [algo]
+    properties:
+        seedLength:
+          type: integer
+          minimum: -1
+          adapter:
+            prefix: "--seed-length"
+            order: 2
+        algo:
+            type: string
+            enum: [map1]
+            adapter:
+                order: 0
+  map2Options:
+    type: object
+    required: [algo]
+    properties:
+        maxSeedHits:
+          type: integer
+          minimum: -1
+          adapter:
+            prefix: "--max-seed-hits"
+            order: 2
+        algo:
+            type: string
+            enum: [map2]
+            adapter:
+              order: 0
+  map3Options:
+    type: object
+    required: [algo]
+    properties:
+        fwdSearch:
+          type: boolean
+          adapter:
+            prefix: "--fwd-search"
+            order: 2
+        algo:
+            type: string
+            enum: [map3]
+            adapter:
+              order: 0
+  map4Options:
+    type: object
+    required: [algo]
+    properties:
+        seedStep:
+          type: integer
+          minimum: -1
+          adapter:
+            prefix: "--seed-step"
+            order: 2
+        algo:
+            type: string
+            enum: [map2]
+            adapter:
+              order: 0
+  map1:
+    allOf:
+        - $ref: "#definitions/map1Options"
+        - $ref: "#definitions/algoCommonOptions"
+  map2:
+    allOf:
+        - $ref: "#definitions/map2Options"
+        - $ref: "#definitions/algoCommonOptions"
+  map3:
+    allOf:
+        - $ref: "#definitions/map3Options"
+        - $ref: "#definitions/algoCommonOptions"
+  map4:
+    allOf:
+        - $ref: "#definitions/map4Options"
+        - $ref: "#definitions/algoCommonOptions"
+
+inputs:
+    type: object
+    required: [stages]
+    properties:
+      # $ref: "#mixins/global"  # Mixin global options
+      stages:
+        type: array
+        adapter:
+          order: 2
+        minItems: 1
+        items:
+          type: object
+          required: [stageId, algos]
+          properties:
+            stageId:  # issue: must be unique in array
+              type: integer
+              adapter:
+                prefix: stage
+                order: 0
+                separator: ""
+            stageOption1:  # Not sure what these are
+              type: boolean
+              adapter:
+                prefix: "-n"
+                order: 1
+            algos:
+              type: array
+              adapter:
+                order: 2
+              minItems: 1
+              items:
+                type: object
+                oneOf:
+                 - $ref: "#definitions/map1"
+                 - $ref: "#definitions/map2"
+                 - $ref: "#definitions/map3"
+                 - $ref: "#definitions/map4"
+
+outputs:
+    type: object
+    required: [sam]
+    properties:
+     sam:
+       type: file
+       adapter:
+         glob: output.sam
+
+adapter:
+    baseCmd: [tmap, mapall]
+    stdout: output.sam
+

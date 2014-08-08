@@ -38,8 +38,7 @@ class Loader(object):
         return self.resolve_ref({'$ref': url}, base_url)
 
     def resolve_ref(self, obj, base_url):
-        ref, checksum = obj.pop('$ref'), obj.pop('$checksum', None)
-        url = urlparse.urljoin(base_url, ref)
+        url = urlparse.urljoin(base_url, obj['$ref'])
         if url in self.resolved:
             return self.resolved[url]
         if url in self.resolving:
@@ -49,10 +48,9 @@ class Loader(object):
         document = self.fetch(doc_url)
         fragment = copy.deepcopy(resolve_pointer(document, pointer))
         try:
-            self.verify_checksum(checksum, fragment)
-            if isinstance(fragment, dict):
-                fragment = dict(obj, **fragment)
+            self.verify_checksum(obj.get('checksum'), fragment)
             result = self.resolve_all(fragment, doc_url)
+            self.resolved[url] = result
         finally:
             del self.resolving[url]
         return result

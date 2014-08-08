@@ -1,0 +1,20 @@
+inputs:
+    reads:
+      path: reads.fastq
+    stages:
+      - stageId: 1
+        algos:
+          - algo: map1
+            minSeqLen: 20
+          - algo: map2
+            minSeqLen: 20
+      - stageId: 2
+        algos:
+          - algo: map1
+            minSeqLen: 10
+            maxSeqLen: 20
+            seedLength: 16
+          - algo: map2
+            minSeqLen: 10
+            maxSeqLen: 20
+            maxSeedHits: -1
