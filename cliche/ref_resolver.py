@@ -88,7 +88,7 @@ class Loader(object):
                 with open(path) as fp:
                     result = yaml.load(fp)
             except (OSError, IOError) as e:
-                raise RuntimeError(url, cause=e)
+                raise RuntimeError('Failed for %s: %s' % (url, e))
         else:
             raise ValueError('Unsupported scheme: %s' % scheme)
         self.fetched[url] = result

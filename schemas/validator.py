@@ -1,27 +1,32 @@
-import sys
-import json
+import os
+import yaml
+from jsonschema.validators import Draft4Validator
 
-from os.path import dirname, join
 
-from jsonschema.validators import validator_for, validate
+def load(path):
+    with open(path) as fp:
+        return yaml.load(fp)
+
+
+META_SCHEMA = load('metaschema.json')
+TOOL_SCHEMA = load('tool.json')
 
 
 def validate_schema(schema):
-    cls = validator_for(schema)
-    cls.check_schema(schema)
+    Draft4Validator.check_schema(schema)
 
 
 def validate_tool(tool):
-    schema_path = join(dirname(__file__), 'tool.json')
-    tool_schema = json.load(open(schema_path))
-    validate(tool, tool_schema)
+    Draft4Validator(TOOL_SCHEMA).validate(tool)
+    Draft4Validator(META_SCHEMA).validate(tool['inputs'])
+    Draft4Validator(META_SCHEMA).validate(tool['outputs'])
 
 
-def main(args=None):
-    if args is None:
-        args = sys.argv
-    for f in args:
-        validate_schema(json.load(open(f)))
+def validate_all():
+    validate_schema(TOOL_SCHEMA)
+    validate_schema(META_SCHEMA)
+    validate_tool(load('../examples/tmap.yml')['mapall'])
 
-if __name__ == "__main__":
-    main()
+
+if __name__ == '__main__':
+    validate_all()

@@ -1,73 +1,41 @@
 {
     "$schema": "http://json-schema.org/draft-04/schema#",
-    "id": "http://example.org/tool",
-    "description": "Common workflow tool description schema",
-    
-    "definitions": {
-        "file": {
-          "type": "object",
-          "properties": {
-            "path": { "type": "string" },
-            "size": { "type": "number" },
-            "checksum": { "type": "string" },
-            "secondaryFiles": {
-              "type": "array",
-              "items": { "$ref": "#definitions/file" }}
-          }
-        },
-        "inputAdapter": {
-          "type": "object",
-          "properties": {
-            "adapter": {
-              "type": "object",
-              "properties": {
-                "prefix": { "type": "string" },
-                "order": { "type": "integer" },
-                "separator": { "type": "string" },
-                "itemSeparator": { "type": "string" },
-                "streamable": { "type": "boolean" },
-                "value": { }
-              }
-            },
-            "additionalProperties": {}
-          }
-        },
-        "outputAdapter": {
-          "type": "object",
-          "properties": {
-            "glob": { "type": "string" },
-            "streamable": { "type": "boolean" }
-          }
-        },
-        "inputSchemaPatch": {
-          "type": "object",
-          "properties": {
-            "properties": {
-              "anyOf": [
-                { "$ref": "http://json-schema.org/draft-04/schema#" },
-                { "$ref": "#definitions/inputAdapter" }
-              ],
-              "default": {}
-            },
-            "items": {
-              "anyOf": [
-                { "$ref": "http://json-schema.org/draft-04/schema#" },
-                { "$ref": "#definitions/inputAdapter" }
-              ],
-              "default": {}
-            }
-          }
-        },
-        "augumentedInputsSchema": {
-          "anyOf": [
-            { "$ref": "http://json-schema.org/draft-04/schema#" },
-            { "$ref": "#definitions/inputSchemaPatch" }
-          ]
-        }
-    },
-    
+    "description": "Common tool description schema",
     "type": "object",
     "properties": {
+        "documentAuthor": { "type": "string" },
+        "softwareDescription": { "type": "object" },
+        "softwareRelease": { "type": "object" },
+        "inputs": { "$ref": "file://metaschema.json" },
+        "outputs": { "$ref": "file://metaschema.json" },
+        "requirements": {
+            "type": "object",
+            "properties": {
+                "platformFeatures": { "$ref": "http://json-schema.org/draft-04/schema#definitions/stringArray" },
+                "environment": {
+                    "type": "object",
+                    "properties": {
+                        "container": {
+                            "type": "object",
+                            "properties": {
+                                "imageId": { "type": "string" },
+                                "type": { "type": "string" },
+                                "uri": { "type": "string" }
+                            }
+                        }
+                    }
+                },
+                "resources": {
+                    "type": "object",
+                    "properties": {
+                        "cpu": { "type": "number" },
+                        "diskSpace": { "type": "number" },
+                        "mem": { "type": "number" },
+                        "network": { "type": "boolean" }
+                    }
+                }
+            }
+        },
         "adapter": {
             "type": "object",
             "properties": {
@@ -76,21 +44,20 @@
                     "items": {
                         "type": "object",
                         "properties": {
-                            "order": {
-                                "type": "number"
-                            },
-                            "value": {
-                                "type": "string"
-                            },
-                            "valueFrom": {
-                                "type": "string",
-                                "format": "url"
-                            }
+                            "prefix": { "type": "string" },
+                            "order": { "type": "integer" },
+                            "separator": { "type": "string" },
+                            "itemSeparator": { "type": "string" },
+                            "value": { "type": "string" },
+                            "valueFrom": { "type": "string" }
                         }
                     }
                 },
                 "baseCmd": {
-                    "$ref": "http://json-schema.org/draft-04/schema#definitions/stringArray"
+                    "oneOf": [
+                        { "$ref": "http://json-schema.org/draft-04/schema#definitions/stringArray" },
+                        { "type": "string" }
+                    ]
                 },
                 "outputs": {
                     "type": "object",
@@ -108,79 +75,8 @@
                         }
                     }
                 },
-                "stdout": {
-                    "type": "string"
-                }
+                "stdout": { "type": "string" }
             }
-        },
-        "documentAuthor": {
-            "type": "string"
-        },
-        "inputs": { "$ref": "#definitions/augumentedInputsSchema" },
-        "outputs": {
-            "type": "object",
-            "allOf": [
-                { "$ref": "http://json-schema.org/draft-04/schema#" },
-                { "$ref": "#definitions/outputAdapter" }
-            ]
-        },
-        "requirements": {
-            "type": "object",
-            "properties": {
-                "environment": {
-                    "type": "object",
-                    "properties": {
-                        "container": {
-                            "type": "object",
-                            "properties": {
-                                "imageId": {
-                                    "type": "string"
-                                },
-                                "type": {
-                                    "type": "string"
-                                },
-                                "uri": {
-                                    "type": "string"
-                                }
-                            }
-                        }
-                    }
-                },
-                "platformFeatures": {
-                  "$ref": "http://json-schema.org/draft-04/schema#definitions/stringArray"
-                },
-                "resources": {
-                    "type": "object",
-                    "properties": {
-                        "cpu": {
-                            "type": ["number", "null"]
-                        },
-                        "diskSpace": {
-                            "type": ["number", "null"]
-                        },
-                        "mem": {
-                            "type": ["number", "null"]
-                        },
-                        "network": {
-                            "type": ["boolean", "null"]
-                        },
-                        "ports": {
-                            "anyOf": [
-                              {
-                                "type": "array",
-                                "items": {
-                                  "type": "integer"
-                                }
-                              },
-                              {"type": "null"}
-                             ]
-                        }
-                    }
-                }
-            }
-        },
-        "softwareDescription": {
-            "type": "object"
         }
     }
 }
