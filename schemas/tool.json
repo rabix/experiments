@@ -6,8 +6,8 @@
         "documentAuthor": { "type": "string" },
         "softwareDescription": { "type": "object" },
         "softwareRelease": { "type": "object" },
-        "inputs": { "$ref": "file://metaschema.json" },
-        "outputs": { "$ref": "file://metaschema.json" },
+        "inputs": { "$ref": "https://raw.githubusercontent.com/rabix/experiments/master/schemas/metaschema.json" },
+        "outputs": { "$ref": "https://raw.githubusercontent.com/rabix/experiments/master/schemas/metaschema.json" },
         "requirements": {
             "type": "object",
             "properties": {

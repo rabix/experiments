@@ -1,4 +1,3 @@
-import os
 import yaml
 from jsonschema.validators import Draft4Validator
 
@@ -25,7 +24,8 @@ def validate_tool(tool):
 def validate_all():
     validate_schema(TOOL_SCHEMA)
     validate_schema(META_SCHEMA)
-    validate_tool(load('../examples/tmap.yml')['mapall'])
+    validate_tool(load('../examples/bwa-mem.yml')['tool'])
+    # validate_tool(load('../examples/tmap.yml')['mapall'])
 
 
 if __name__ == '__main__':

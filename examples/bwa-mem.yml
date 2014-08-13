@@ -39,7 +39,7 @@ job:
 # Tool
 tool:
   softwareDescription: {}
-  documentAuthor: # Who wrapped it
+  documentAuthor: boysha
   requirements:
     environment:
       container:
@@ -49,8 +49,6 @@ tool:
     resources:
       cpu: 0
       mem: 5000
-      ports:
-      diskSpace:
       network: No
     platformFeatures:
       - "http://example.org/transforms#strip_ext"
@@ -82,7 +80,7 @@ tool:
         minItems: 1
         maxItems: 4
         items:
-            type: number
+          type: number
         adapter:
           order: 1
           prefix: "-I"
@@ -97,16 +95,9 @@ tool:
           glob: output.sam
           streamable: Yes
   adapter:
-    baseCmd: bwa  # For simplicity, this could be [bwa, mem]
-    stdout: output.sam  # Would be awesome to have expressions here
+    baseCmd: [bwa, mem]
+    stdout: output.sam
     args:
-      - order: 0
-        value: mem
       - order: 1
         prefix: "-t"
         valueFrom: "#allocatedResources/cpu"
-    outputs:
-      sam:
-        streamable: Yes
-        glob: output.sam
-
