@@ -43,36 +43,40 @@ mixins:
         order: 2
         prefix: "--max-seq-length"
   map1:
-    $ref: "#mixins/algoCommon"
-    seedLength:
-      type: integer
-      minimum: -1
-      adapter:
-        prefix: "--seed-length"
-        order: 2
+    allOf:
+      - $ref: "#mixins/algoCommon"
+      - seedLength:
+          type: integer
+          minimum: -1
+          adapter:
+            prefix: "--seed-length"
+            order: 2
   map2:
-    $ref: "#mixins/algoCommon"
-    maxSeedHits:
-      type: integer
-      minimum: -1
-      adapter:
-        prefix: "--max-seed-hits"
-        order: 2
+    allOf:
+      - $ref: "#mixins/algoCommon"
+      - maxSeedHits:
+          type: integer
+          minimum: -1
+          adapter:
+            prefix: "--max-seed-hits"
+            order: 2
   map3:
-    $ref: "#mixins/algoCommon"
-    fwdSearch:
-      type: boolean
-      adapter:
-        prefix: "--fwd-search"
-        order: 2
+    allOf:
+      - $ref: "#mixins/algoCommon"
+      - fwdSearch:
+          type: boolean
+          adapter:
+            prefix: "--fwd-search"
+            order: 2
   map4:
-    $ref: "#mixins/algoCommon"
-    seedStep:
-      type: integer
-      minimum: -1
-      adapter:
-        prefix: "--seed-step"
-        order: 2
+    allOf:
+      - $ref: "#mixins/algoCommon"
+      - seedStep:
+          type: integer
+          minimum: -1
+          adapter:
+            prefix: "--seed-step"
+            order: 2
   
 algos:
   map1:
@@ -84,7 +88,8 @@ algos:
         enum: [map1]
         adapter:
           order: 0
-      $ref: "#mixins/map1"
+      additionalProperties:
+        $ref: "#mixins/map1"
   map2:
     type: object
     required: [algo]
@@ -94,7 +99,8 @@ algos:
         enum: [map2]
         adapter:
           order: 0
-      $ref: "#mixins/map2"
+      additionalProperties:
+        $ref: "#mixins/map2"
   map3:
     type: object
     required: [algo]
@@ -104,7 +110,8 @@ algos:
         enum: [map3]
         adapter:
           order: 0
-      $ref: "#mixins/map3"
+      additionalProperties:
+        $ref: "#mixins/map3"
   map4:
     type: object
     required: [algo]
@@ -114,14 +121,16 @@ algos:
         enum: [map4]
         adapter:
           order: 0
-      $ref: "#mixins/map4"
+      additionalProperties:
+        $ref: "#mixins/map4"
   
 mapall:
   inputs:
     type: object
     required: [stages]
-    properties:
+    additionalProperties:
       $ref: "#mixins/global"  # Mixin global options
+    properties:
       stages:
         type: array
         adapter:
