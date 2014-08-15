@@ -13,9 +13,9 @@ class Argument(object):
 
     def __init__(self, value, schema, adapter=None):
         self.schema = schema or {}
-        if 'oneOf' in schema:
+        if 'oneOf' in self.schema:
             self.schema = self._schema_from_opts(schema['oneOf'], value)
-        self.adapter = adapter or schema.get('adapter', {})
+        self.adapter = adapter or self.schema.get('adapter', {})
         self.position = self.adapter.get('order', 99)
         self.prefix = self.adapter.get('prefix')
         self.separator = self.adapter.get('separator')
@@ -33,8 +33,13 @@ class Argument(object):
     def __unicode__(self):
         return unicode(self.value)
 
+    def _schema_for(self, key):
+        """ If value is object, get schema for its property. """
+        if key in self.schema.get('properties', {}):
+            return self.schema['properties'][key]
+
     def get_args_and_stdin(self, adapter_mixins=None):
-        args = [Argument(v, self.schema.get('properties', {}).get(k)) for k, v in self.value.iteritems()]
+        args = [Argument(v, self._schema_for(k)) for k, v in self.value.iteritems()]
         args += adapter_mixins or []
         args.sort(key=lambda x: x.position)
         stdin = [a.value for a in args if a.is_stdin()]
@@ -64,7 +69,7 @@ class Argument(object):
         return [self.prefix + self.separator + unicode(self.value)]
 
     def _as_dict(self):
-        args = [Argument(v, self.schema.get('properties', {}).get(k)) for k, v in self.value.iteritems()]
+        args = [Argument(v, self._schema_for(k)) for k, v in self.value.iteritems()]
         args.sort(key=lambda x: x.position)
         return reduce(operator.add, [a.arg_list() for a in args], [])
 

@@ -38,7 +38,8 @@ class Loader(object):
         return self.resolve_ref({'$ref': url}, base_url)
 
     def resolve_ref(self, obj, base_url):
-        ref, checksum = obj.pop('$ref'), obj.pop('$checksum', None)
+        ref, mixin, checksum = obj.pop('$ref', None), obj.pop('$mixin', None), obj.pop('$checksum', None)
+        ref = ref or mixin
         url = urlparse.urljoin(base_url, ref)
         if url in self.resolved:
             return self.resolved[url]
@@ -50,7 +51,7 @@ class Loader(object):
         fragment = copy.deepcopy(resolve_pointer(document, pointer))
         try:
             self.verify_checksum(checksum, fragment)
-            if isinstance(fragment, dict):
+            if isinstance(fragment, dict) and mixin:
                 fragment = dict(obj, **fragment)
             result = self.resolve_all(fragment, doc_url)
         finally:
@@ -61,7 +62,7 @@ class Loader(object):
         if isinstance(document, list):
             iterator = enumerate(document)
         elif isinstance(document, dict):
-            if '$ref' in document:
+            if '$ref' in document or '$mixin' in document:
                 return self.resolve_ref(document, base_url)
             iterator = document.iteritems()
         else:
