@@ -61,7 +61,7 @@ tool:
         type: file
         adapter:
           order: 2
-          transform: strip_ext
+          transform: os.path.splitext(self['path'])[0]
       reads:
         type: array
         minItems: 1
@@ -101,4 +101,5 @@ tool:
     args:
       - order: 1
         prefix: "-t"
-        valueFrom: "#allocatedResources/cpu"
+        value:
+          $expr: job['allocatedResources']['cpu']

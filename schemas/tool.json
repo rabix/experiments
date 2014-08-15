@@ -2,6 +2,39 @@
     "$schema": "http://json-schema.org/draft-04/schema#",
     "description": "Common tool description schema",
     "type": "object",
+    "definitions": {
+        "expression": {
+            "type": "object",
+            "required": ["$expr"],
+            "properties": {
+                "$expr": { "type": "string"}
+            }
+        },
+        "strOrExpr": {
+            "oneOf": [
+                { "type": "string" },
+                { "$ref": "#definitions/expression" }
+            ]
+        },
+        "numOrExpr": {
+            "oneOf": [
+                { "type": "number" },
+                { "$ref": "#definitions/expression" }
+            ]
+        },
+        "intOrExpr": {
+            "oneOf": [
+                { "type": "integer" },
+                { "$ref": "#definitions/expression" }
+            ]
+        },
+        "boolOrExpr": {
+            "anyOf": [
+                { "type": "boolean" },
+                { "$ref": "#definitions/expression" }
+            ]
+        }
+    },
     "properties": {
         "documentAuthor": { "type": "string" },
         "softwareDescription": { "type": "object" },
@@ -28,10 +61,10 @@
                 "resources": {
                     "type": "object",
                     "properties": {
-                        "cpu": { "type": "number" },
-                        "diskSpace": { "type": "number" },
-                        "mem": { "type": "number" },
-                        "network": { "type": "boolean" }
+                        "cpu": { "$ref": "#definitions/intOrExpr" },
+                        "diskSpace": { "$ref": "#definitions/intOrExpr" },
+                        "mem": { "$ref": "#definitions/intOrExpr" },
+                        "network": { "$ref": "#definitions/boolOrExpr" }
                     }
                 }
             }
@@ -48,34 +81,18 @@
                             "order": { "type": "integer" },
                             "separator": { "type": "string" },
                             "itemSeparator": { "type": "string" },
-                            "value": { "type": "string" },
-                            "valueFrom": { "type": "string" }
+                            "value": { "$ref": "#definitions/strOrExpr" }
                         }
                     }
                 },
                 "baseCmd": {
                     "oneOf": [
                         { "$ref": "http://json-schema.org/draft-04/schema#definitions/stringArray" },
-                        { "type": "string" }
+                        { "type": "string" },
+                        { "$ref": "#definitions/expression" }
                     ]
                 },
-                "outputs": {
-                    "type": "object",
-                    "properties": {
-                        "sam": {
-                            "type": "object",
-                            "properties": {
-                                "glob": {
-                                    "type": "string"
-                                },
-                                "streamable": {
-                                    "type": "boolean"
-                                }
-                            }
-                        }
-                    }
-                },
-                "stdout": { "type": "string" }
+                "stdout": { "$ref": "#definitions/strOrExpr" }
             }
         }
     }

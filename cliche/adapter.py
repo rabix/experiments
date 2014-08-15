@@ -2,16 +2,21 @@ import os
 import operator
 
 from jsonschema import Draft4Validator
-from cliche.ref_resolver import resolve_pointer, from_url
+from cliche.ref_resolver import from_url
+
+
+def evaluate(expression, job, context):
+    vars = {
+        'job': job,
+        'self': context,
+        'os': os
+    }
+    return eval(expression, vars)
 
 
 class Argument(object):
-    TRANSFORMS = {
-        'strip_ext': lambda x: os.path.splitext(x)[0],
-        'M-suffix': lambda x: '%sM' % x,
-    }
-
-    def __init__(self, value, schema, adapter=None):
+    def __init__(self, job, value, schema, adapter=None):
+        self.job = job
         self.schema = schema or {}
         if 'oneOf' in self.schema:
             self.schema = self._schema_from_opts(schema['oneOf'], value)
@@ -23,9 +28,11 @@ class Argument(object):
             self.separator = None
         self.item_separator = self.adapter.get('itemSeparator', ',')
         self.transform = self.adapter.get('transform')
-        if self.schema.get('type') in ('file', 'directory'):
-            value = value['path']  # FIXME
-        self.value = self.TRANSFORMS.get(self.transform, lambda x: x)(value)
+        if self.transform:
+            value = evaluate(self.transform, self.job, value)
+        elif self.schema.get('type') in ('file', 'directory'):
+            value = value['path']
+        self.value = value
 
     def __int__(self):
         return bool(self.arg_list())
@@ -39,7 +46,7 @@ class Argument(object):
             return self.schema['properties'][key]
 
     def get_args_and_stdin(self, adapter_mixins=None):
-        args = [Argument(v, self._schema_for(k)) for k, v in self.value.iteritems()]
+        args = [Argument(self.job, v, self._schema_for(k)) for k, v in self.value.iteritems()]
         args += adapter_mixins or []
         args.sort(key=lambda x: x.position)
         stdin = [a.value for a in args if a.is_stdin()]
@@ -69,13 +76,13 @@ class Argument(object):
         return [self.prefix + self.separator + unicode(self.value)]
 
     def _as_dict(self):
-        args = [Argument(v, self._schema_for(k)) for k, v in self.value.iteritems()]
+        args = [Argument(self.job, v, self._schema_for(k)) for k, v in self.value.iteritems()]
         args.sort(key=lambda x: x.position)
         return reduce(operator.add, [a.arg_list() for a in args], [])
 
     def _as_list(self):
         item_schema = self.schema.get('items', {})
-        args = [Argument(item, item_schema) for item in self.value]
+        args = [Argument(self.job, item, item_schema) for item in self.value]
         if not self.prefix:
             return reduce(operator.add, [a.arg_list() for a in args], [])
         if not self.separator and not self.item_separator:
@@ -120,8 +127,8 @@ class Adapter(object):
         self.output_schema = self.tool.get('outputs')
 
     def _arg_list_and_stdin(self, job):
-        adapter_args = [Argument(self._get_value(a, job), {}, a) for a in self.args]
-        return Argument(job['inputs'], self.input_schema).get_args_and_stdin(adapter_mixins=adapter_args)
+        adapter_args = [Argument(job, self._get_value(a, job), {}, a) for a in self.args]
+        return Argument(job, job['inputs'], self.input_schema).get_args_and_stdin(adapter_args)
 
     def cmd_line(self, job):
         arg_list, stdin = self._arg_list_and_stdin(job)
@@ -130,11 +137,12 @@ class Adapter(object):
         return ' '.join(map(unicode, self.base_cmd + arg_list + stdin + stdout))
 
     def _get_value(self, arg, job):
-        if arg.get('value') is not None:
-            return arg['value']
-        if 'valueFrom' not in arg:
-            raise Exception('No way to get value for arg %s' % arg)
-        return resolve_pointer(job, arg['valueFrom'], None)
+        value = arg.get('value')
+        if not value:
+            raise Exception('Value not specified for arg %s' % arg)
+        if isinstance(value, dict) and '$expr' in value:
+            value = evaluate(value['$expr'], job, None)
+        return value
 
 
 def cmd_line(doc_path, tool_key='tool', job_key='job'):
@@ -148,6 +156,8 @@ def test_cmd_line(tool, job, test):
     if result == test['expected_cmd_line']:
         return True
     else:
+        print 'Got:', result
+        print 'Expected:', test['expected_cmd_line']
         return False
 
 
@@ -156,11 +166,6 @@ def run_tests(doc_path, tool_key='tool', test_key='tests'):
     tests = doc[test_key]
     for test in tests:
         tool = test.get(tool_key)
-        if not isinstance(tool, dict):
-            try:
-                tool = resolve_pointer(doc, '/'.join([tool, 'tool']))
-            except:
-                raise Exception('There is no specified tool')
         if test_cmd_line(tool, test.get('test_job'), test):
             print 'Test %s completed successfully!' % test.get('id')
         else:
