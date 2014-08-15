@@ -116,7 +116,7 @@ class Adapter(object):
 
     def _arg_list_and_stdin(self, job):
         adapter_args = [Argument(self._get_value(a, job), {}, a) for a in self.args]
-        return Argument(job['inputs'], self.input_schema).get_args_and_stdin(adapter_args)
+        return Argument(job['inputs'], self.input_schema).get_args_and_stdin(adapter_mixins=adapter_args)
 
     def cmd_line(self, job):
         arg_list, stdin = self._arg_list_and_stdin(job)
@@ -138,10 +138,34 @@ def cmd_line(doc_path, tool_key='tool', job_key='job'):
     return Adapter(tool).cmd_line(job)
 
 
+def test_cmd_line(tool, job, test):
+    result = Adapter(tool).cmd_line(job)
+    if result == test['expected_cmd_line']:
+        return True
+    else:
+        return False
+
+
+def run_tests(doc_path, tool_key='tool', test_key='tests'):
+    doc = from_url(doc_path)
+    tests = doc[test_key]
+    for test in tests:
+        tool = test.get(tool_key)
+        if not isinstance(tool, dict):
+            try:
+                tool = resolve_pointer(doc, '/'.join([tool, 'tool']))
+            except:
+                raise Exception('There is no specified tool')
+        if test_cmd_line(tool, test.get('test_job'), test):
+            print 'Test %s completed successfully!' % test.get('id')
+        else:
+            print 'Test %s completed failed!' % test.get('id')
+
+
 if __name__ == '__main__':
     print cmd_line(os.path.join(os.path.dirname(__file__), '../examples/tmap.yml'), 'mapall', 'exampleJob')
     print cmd_line(os.path.join(os.path.dirname(__file__), '../examples/bwa-mem.yml'))
-
+    run_tests(os.path.join(os.path.dirname(__file__), '../examples/bwa-mem-test.yml'))
 
 
 

@@ -112,7 +112,7 @@ POINTER_DEFAULT = object()
 
 
 def resolve_pointer(document, pointer, default=POINTER_DEFAULT):
-    parts = urlparse.unquote(pointer.lstrip('/')).split('/') \
+    parts = urlparse.unquote(pointer.lstrip('/#')).split('/') \
         if pointer else []
     for part in parts:
         if isinstance(document, collections.Sequence):

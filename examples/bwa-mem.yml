@@ -26,6 +26,7 @@ job:
         size: 123
         checksum: md5$hash
     min_std_max_min: [1, 2, 3, 4]
+    minimum_seed_length: 3
   platform: "http://example.org/my_platform/v1"
   allocatedResources:
     cpu: 4
