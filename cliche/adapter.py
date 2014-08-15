@@ -156,11 +156,6 @@ def run_tests(doc_path, tool_key='tool', test_key='tests'):
     tests = doc[test_key]
     for test in tests:
         tool = test.get(tool_key)
-        if not isinstance(tool, dict):
-            try:
-                tool = resolve_pointer(doc, '/'.join([tool, 'tool']))
-            except:
-                raise Exception('There is no specified tool')
         if test_cmd_line(tool, test.get('test_job'), test):
             print 'Test %s completed successfully!' % test.get('id')
         else:
