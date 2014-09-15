@@ -1,0 +1,179 @@
+mixins:
+  global:
+    reads:
+      type: file
+      required: Yes
+      adapter:
+        streamable: Yes
+        stdin: Yes
+  algoCommon:
+    minSeqLen:
+      type: integer
+      adapter:
+        order: 2
+        prefix: "--min-seq-length"
+    maxSeqLen:
+      type: integer
+      adapter:
+        order: 2
+        prefix: "--max-seq-length"
+  map1:
+    $mixin: "#mixins/algoCommon"
+    seedLength:
+      type: integer
+      minimum: -1
+      adapter:
+        prefix: "--seed-length"
+        order: 2
+  map2:
+    $mixin: "#mixins/algoCommon"
+    maxSeedHits:
+      type: integer
+      minimum: -1
+      adapter:
+        prefix: "--max-seed-hits"
+        order: 2
+  map3:
+    $mixin: "#mixins/algoCommon"
+    fwdSearch:
+      type: boolean
+      adapter:
+        prefix: "--fwd-search"
+        order: 2
+  map4:
+    $mixin: "#mixins/algoCommon"
+    seedStep:
+      type: integer
+      minimum: -1
+      adapter:
+        prefix: "--seed-step"
+        order: 2
+
+algos:
+  map1:
+    type: object
+    required: [algo]
+    properties:
+      algo:
+        type: string
+        enum: [map1]
+        adapter:
+          order: 0
+      $mixin: "#mixins/map1"
+  map2:
+    type: object
+    required: [algo]
+    properties:
+      algo:
+        type: string
+        enum: [map2]
+        adapter:
+          order: 0
+      $mixin: "#mixins/map2"
+  map3:
+    type: object
+    required: [algo]
+    properties:
+      algo:
+        type: string
+        enum: [map3]
+        adapter:
+          order: 0
+      $mixin: "#mixins/map3"
+  map4:
+    type: object
+    required: [algo]
+    properties:
+      algo:
+        type: string
+        enum: [map4]
+        adapter:
+          order: 0
+      $mixin: "#mixins/map4"
+
+mapall:
+  inputs:
+    type: object
+    required: [stages]
+    properties:
+      $mixin: "#mixins/global"  # Mixin global options
+      stages:
+        type: array
+        adapter:
+          order: 2
+        minItems: 1
+        items:
+          type: object
+          required: [stageId, algos]
+          properties:
+            stageId:  # issue: must be unique in array
+              type: integer
+              adapter:
+                prefix: stage
+                order: 0
+                separator: ""
+            stageOption1:  # Not sure what these are
+              type: boolean
+              adapter:
+                prefix: "-n"
+                order: 1
+            algos:
+              type: array
+              adapter:
+                order: 2
+              minItems: 1
+              items:
+                type: object
+                oneOf:
+                 - $ref: "#algos/map1"
+                 - $ref: "#algos/map2"
+                 - $ref: "#algos/map3"
+                 - $ref: "#algos/map4"
+
+  outputs:
+   type: object
+   required: [sam]
+   properties:
+     sam:
+       type: file
+       adapter:
+         glob: output.sam
+
+  adapter:
+    baseCmd: [tmap, mapall]
+    stdout: output.sam
+
+tests:
+  - id: tmap-test-1
+    test_job:
+      inputs:
+        reads:
+          path: reads.fastq
+        stages:
+          - stageId: 1
+            algos:
+              - algo: map1
+                minSeqLen: 20
+              - algo: map2
+                minSeqLen: 20
+          - stageId: 2
+            algos:
+              - algo: map1
+                minSeqLen: 10
+                maxSeqLen: 20
+                seedLength: 16
+              - algo: map2
+                minSeqLen: 10
+                maxSeqLen: 20
+                maxSeedHits: -1
+
+      platform: "http://example.org/my_platform/v1"
+      allocatedResources:
+        cpu: 4
+        mem: 5000
+        ports: []
+        diskSpace: 20000
+        network: No
+    tool:
+      $ref: "#mapall"
+    expected_cmd_line: tmap mapall stage1 map1 --min-seq-length 20 map2 --min-seq-length 20 stage2 map1 --max-seq-length 20 --seed-length 16 --min-seq-length 10 map2 --max-seed-hits -1 --max-seq-length 20 --min-seq-length 10 < reads.fastq > output.sam
