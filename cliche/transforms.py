@@ -52,7 +52,8 @@ def sbg_schema2json_schema(sbg):
         return js_param
 
 
-    json = {"inputs": {
+    json = {"$schema": "http://json-schema.org/schema#",
+            "inputs": {
                 "type": "object",
                 "properties": {},
                 "required": []
@@ -86,11 +87,15 @@ def sbg_job2cliche_job(doc):
 
 
 
-def clice_job2sbg_job(doc):
+def cliche_job2sbg_job(doc):
   pass
 
 
 if __name__ == "__main__":
     import json
+    import jsonschema
     bwa = json.load(open("/home/luka/devel/rabix/rabix/tests/apps/BwaMem.json"))
-    print(json.dumps(sbg_schema2json_schema(bwa["schema"]), indent=4))
+    bwa_schm = sbg_schema2json_schema(bwa["schema"])
+    print(json.dumps(bwa_schm, indent=2))
+    jsonschema.Draft4Validator.check_schema(bwa_schm)
+
