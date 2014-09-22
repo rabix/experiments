@@ -83,12 +83,34 @@ def sbg_schema2json_schema(sbg):
 
 
 def sbg_job2cliche_job(doc):
-  pass
+    pass
 
 
 
 def cliche_job2sbg_job(doc):
-  pass
+    sbg_job = {"$$type": "job",
+               "wrapper_id": doc["app"],
+               "args": {
+                "$inputs": {},
+                "$params": {}
+               }
+              }
+    sbg_resources = {"$$type": "resources"}
+    allocated_resources = doc["allocatedResources"]
+
+    sbg_resources["high_io"] = allocated_resources["netrork"]
+    sbg_resources["cpu"] = allocated_resources["cpu"]
+    sbg_resources["mem_mb"] = allocatedResources["mem"]
+
+    sbg_job["resources"] = sbg_resources
+
+    for k, v in doc["inputs"].items:
+        if isinstance(v, dict) and "path" in v:
+            sbg_job["args"]["$inputs"][k] = v["path"]
+        else:
+            sbg_job["args"]["$params"][k] = v
+
+    return sbg_job
 
 
 if __name__ == "__main__":
