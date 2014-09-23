@@ -57,7 +57,9 @@ def sbg_schema2json_schema(sbg):
                 "type": "object",
                 "properties": {},
                 "required": []
-            }
+            },
+            "outputs": {},
+            "adapter": {"baseCmd": ["python", "-m", "sbgsdk.cli", "run-full"]}
            }
 
     sbg_schema = sbg["schema"]
