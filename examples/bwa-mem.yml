@@ -46,8 +46,8 @@ tool:
     environment:
       container:
         type: docker
-        uri: "docker://images.example.org/user/repo#tag"  # or docker:user/repo#tag for main index
-        imageId: 64c07fdfab1a
+        uri: "docker://images.sbgenomics.com/rabix/bwa#9d3b9b0359cf"  # or docker:user/repo#tag for main index
+        imageId: "9d3b9b0359cf"
     resources:
       cpu: 0
       mem: 5000
@@ -94,6 +94,7 @@ tool:
       sam:
         type: file
         adapter:
+          stdout: Yes
           glob: output.sam
           streamable: Yes
   adapter:

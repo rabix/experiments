@@ -17,6 +17,7 @@ class Runner(object):
         if not os.path.isabs(working_dir):
             working_dir = os.path.abspath(working_dir)
         self.tool = tool
+        self.container = tool['requirements']['environment']['container']
         self.image_id = tool['requirements']['environment']['container']['imageId']
         self.working_dir = working_dir
         self.stdout = stdout
@@ -75,6 +76,22 @@ class DockerRunner(Runner):
         return self.docker_client.logs(container, stdout=False, stderr=True,
                                        stream=False, timestamps=False)
 
+    def provide_image(self):
+        if filter(lambda x: (self.image_id in x['Id']), self.docker_client.images()):
+            return
+        else:
+            uri = self.container.get('uri')
+            if not uri:
+                logging.error('Image cannot be pulled')
+                raise Exception('Cannot pull image')
+            repo, tag = uri.split('#')
+            repo = repo.lstrip('docker://')
+            self.docker_client.pull(repo, tag)
+            if filter(lambda x: (self.image_id in x['Id']),
+                      self.docker_client.images()):
+                return
+            raise Exception('Image not found')
+
     def run(self, command, **kwargs):
         volumes = {self.WORKING_DIR: {}}
         binds = {self.working_dir: self.WORKING_DIR}
@@ -82,14 +99,18 @@ class DockerRunner(Runner):
         config['Volumes'] = volumes
         config['WorkingDir'] = self.WORKING_DIR
         config.update(**kwargs)
+        self.provide_image()
         try:
             cont = self.docker_client.create_container_from_config(config)
-        except APIError:
-            logging.ERROR('Image %s not found:' % self.image_id)
+        except APIError as e:
+            if e.response.status_code == 404:
+                logging.info('Image %s not found:' % self.image_id)
+                raise RuntimeError('Image %s not found:' % self.image_id)
         try:
             self.docker_client.start(container=cont, binds=binds)
         except APIError:
-            logging.ERROR('Failed to run container')
+            logging.error('Failed to run container')
+            raise RuntimeError('Unable to run container from image %s:' % self.image_id)
         return cont
 
     def run_job(self, job, job_id=None):
@@ -122,8 +143,9 @@ class NativeRunner(Runner):
 if __name__=='__main__':
     # command = ['bash', '-c', 'grep -r chr > output.txt']
     doc = from_url(os.path.join(os.path.dirname(__file__), '../examples/bwa-mem.yml'))
-    bwa = json.load(open("../tests/test-data/BwaMem.json"))
-    tool = sbg_schema2json_schema(bwa["schema"])
+    bwa = json.load(open(os.path.join(os.path.dirname(__file__), "../tests/test-data/BwaMem.json")))
+    tool = sbg_schema2json_schema(bwa)
+    #tool, job = doc['tool'], doc['job']
     job = doc['job']
     runner = DockerRunner(tool)
     print runner.run_job(job)
