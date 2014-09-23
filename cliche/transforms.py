@@ -87,7 +87,7 @@ def sbg_job2cliche_job(doc):
 
 
 
-def cliche_job2sbg_job(doc):
+def cliche_job2sbg_job(doc, schema):
     sbg_job = {"$$type": "job",
                "wrapper_id": doc["app"],
                "args": {
@@ -104,11 +104,23 @@ def cliche_job2sbg_job(doc):
 
     sbg_job["resources"] = sbg_resources
 
-    for k, v in doc["inputs"].items():
-        if isinstance(v, dict) and "path" in v:
-            sbg_job["args"]["$inputs"][k] = v["path"]
+    inputs = schema["inputs"]["properties"]
+
+
+
+    for inp, schema in inputs.items():
+        val = doc["inputs"][inp]
+        if schema["type"] == "file":
+            if val:
+                sbg_job["args"]["$inputs"][inp] = val["path"]
+            else:
+                sbg_job["args"]["$inputs"][inp] = None
+
+        elif schema["type"] == "array" and schema["items"]["type"] == "file":
+            sbg_job["args"]["$inputs"][inp] = [f["path"] for f in val]
+
         else:
-            sbg_job["args"]["$params"][k] = v
+            sbg_job["args"]["$params"][inp] = val
 
     return sbg_job
 
@@ -125,5 +137,5 @@ if __name__ == "__main__":
 
     job_path = join(dirname(__file__), "../examples/bwa-mem.yml")
     job = yaml.load(open(job_path))
-    print(json.dumps(cliche_job2sbg_job(job["job"]), indent=2))
+    print(json.dumps(cliche_job2sbg_job(job["job"], job["tool"]), indent=2))
 
