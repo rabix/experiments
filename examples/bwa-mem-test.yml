@@ -95,8 +95,9 @@ tests:
         min_std_max_min: [1, 2, 3, 4]
       platform: "http://example.org/my_platform/v1"
       allocatedResources:
-        cpu: 4
-        mem: 5000
+        cpu:
+          $expr: job.allocatedResources.mem / 1000
+        mem: 4000
         ports: []
         diskSpace: 20000
         network: No

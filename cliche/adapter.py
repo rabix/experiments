@@ -1,5 +1,6 @@
 import os
 import json
+import copy
 import operator
 
 import execjs
@@ -132,7 +133,15 @@ class Adapter(object):
         adapter_args = [Argument(job, self._get_value(a, job), {}, a) for a in self.args]
         return Argument(job, job['inputs'], self.input_schema).get_args_and_stdin(adapter_args)
 
+    def _resolve_job_resources(self, job):
+        resolved = copy.deepcopy(job)
+        for k, v in job.get('allocatedResources', {}).iteritems():
+            if isinstance(v, dict):
+                resolved['allocatedResources'][k] = evaluate(v['$expr'], resolved, None)
+        return resolved
+
     def cmd_line(self, job):
+        job = self._resolve_job_resources(job)
         arg_list, stdin = self._arg_list_and_stdin(job)
         stdin = ['<', stdin] if stdin else []
         stdout = ['>', self.stdout] if self.stdout else []
