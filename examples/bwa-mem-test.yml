@@ -9,7 +9,8 @@ tools:
           uri: "docker://images.example.org/user/repo#tag"  # or docker:user/repo#tag for main index
           imageId: asd
       resources:
-        cpu: 0
+        cpu:
+          $expr: "{return job.allocatedResources.mem / 1000;}"
         mem: 5000
         network: No
     inputs:
@@ -95,8 +96,6 @@ tests:
         min_std_max_min: [1, 2, 3, 4]
       platform: "http://example.org/my_platform/v1"
       allocatedResources:
-        cpu:
-          $expr: job.allocatedResources.mem / 1000
         mem: 4000
         ports: []
         diskSpace: 20000

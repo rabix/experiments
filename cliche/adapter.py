@@ -9,11 +9,19 @@ from cliche.ref_resolver import from_url
 
 
 def evaluate(expression, job, context):
-    exp = '''function () {
-    job = %s;
-    self = %s;
-    return %s;}()
-    ''' % (json.dumps(job), json.dumps(context), expression)
+    if expression.startswith('{'):
+        exp_tpl = '''function () {
+        job = %s;
+        self = %s;
+        return function()%s();}()
+        '''
+    else:
+        exp_tpl = '''function () {
+        job = %s;
+        self = %s;
+        return %s;}()
+        '''
+    exp = exp_tpl % (json.dumps(job), json.dumps(context), expression)
     return execjs.eval(exp)
 
 
@@ -135,7 +143,8 @@ class Adapter(object):
 
     def _resolve_job_resources(self, job):
         resolved = copy.deepcopy(job)
-        for k, v in job.get('allocatedResources', {}).iteritems():
+        res = self.tool.get('requirements', {}).get('resources', {})
+        for k, v in res.iteritems():
             if isinstance(v, dict):
                 resolved['allocatedResources'][k] = evaluate(v['$expr'], resolved, None)
         return resolved
