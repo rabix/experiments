@@ -61,7 +61,7 @@ tool:
         type: file
         adapter:
           order: 2
-          transform: os.path.splitext(self['path'])[0]
+          transform: self.path.split('.').reverse().splice(1).reverse().join('.')
       reads:
         type: array
         minItems: 1

@@ -1,17 +1,19 @@
 import os
+import json
 import operator
 
+import execjs
 from jsonschema import Draft4Validator
 from cliche.ref_resolver import from_url
 
 
 def evaluate(expression, job, context):
-    vars = {
-        'job': job,
-        'self': context,
-        'os': os
-    }
-    return eval(expression, vars)
+    exp = '''function () {
+    job = %s;
+    self = %s;
+    return %s;}()
+    ''' % (json.dumps(job), json.dumps(context), expression)
+    return execjs.eval(exp)
 
 
 class Argument(object):
