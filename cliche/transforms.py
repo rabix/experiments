@@ -57,12 +57,17 @@ def sbg_schema2json_schema(sbg):
                 "type": "object",
                 "properties": {},
                 "required": []
-            }
+            },
+            "outputs": {},
+            "adapter": {"baseCmd": ["python", "-m", "sbgsdk.cli", "run-full"]}
            }
+
+    sbg_schema = sbg["schema"]
+    sbg_docker = sbg["docker_image_ref"]
 
     js_inputs = json["inputs"]["properties"]
 
-    for inp in sbg["inputs"]:
+    for inp in sbg_schema["inputs"]:
         inp2 = dict(inp)
         inp2["type"] = "file"
 
@@ -73,11 +78,21 @@ def sbg_schema2json_schema(sbg):
 
 
 
-    for param in sbg["params"]:
+    for param in sbg_schema["params"]:
         if inp["required"]:
             json["inputs"]["required"].append(param["id"])
 
         js_inputs[param["id"]] = convert_elem(param)
+
+    json["requirements"] = {
+        "environment": {
+            "container": {
+                "type": "docker",
+                "uri": "docker://" + sbg_docker["image_repo"] + "#" + sbg_docker["image_tag"],
+                "imageId": sbg_docker["image_id"]
+            }
+        }
+    }
 
     return json
 
@@ -130,8 +145,9 @@ if __name__ == "__main__":
     import json
     import yaml
     import jsonschema
-    bwa = json.load(open("../tests/test-data/BwaMem.json"))
-    bwa_schm = sbg_schema2json_schema(bwa["schema"])
+    bwa_path = join(dirname(__file__), "../tests/test-data/BwaMem.json")
+    bwa = json.load(open(bwa_path))
+    bwa_schm = sbg_schema2json_schema(bwa)
     print(json.dumps(bwa_schm, indent=2))
     jsonschema.Draft4Validator.check_schema(bwa_schm)
 
