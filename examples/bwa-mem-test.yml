@@ -57,7 +57,8 @@ tools:
             streamable: Yes
     adapter:
       baseCmd: [bwa, mem]
-      stdout: output.sam
+      stdout:
+        $expr: "'output' + '.sam'"
       args:
         - order: 1
           prefix: "-t"

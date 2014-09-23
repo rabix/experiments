@@ -152,8 +152,11 @@ class Adapter(object):
     def cmd_line(self, job):
         job = self._resolve_job_resources(job)
         arg_list, stdin = self._arg_list_and_stdin(job)
+        stdout = self.stdout
+        if isinstance(stdout, dict):
+            stdout = evaluate(stdout['$expr'], job, None)
         stdin = ['<', stdin] if stdin else []
-        stdout = ['>', self.stdout] if self.stdout else []
+        stdout = ['>', stdout] if stdout else []
         return ' '.join(map(unicode, self.base_cmd + arg_list + stdin + stdout))
 
     def _get_value(self, arg, job):
