@@ -130,7 +130,7 @@ if __name__ == "__main__":
     import json
     import yaml
     import jsonschema
-    bwa = json.load(open("/home/luka/devel/rabix/rabix/tests/apps/BwaMem.json"))
+    bwa = json.load(open("../tests/test-data/BwaMem.json"))
     bwa_schm = sbg_schema2json_schema(bwa["schema"])
     print(json.dumps(bwa_schm, indent=2))
     jsonschema.Draft4Validator.check_schema(bwa_schm)

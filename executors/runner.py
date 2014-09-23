@@ -3,8 +3,10 @@ import docker
 import logging
 import uuid
 import stat
+import json
 from docker.errors import APIError
 from cliche.adapter import Adapter, from_url
+from cliche.transforms import sbg_schema2json_schema
 
 
 class Runner(object):
@@ -120,6 +122,8 @@ class NativeRunner(Runner):
 if __name__=='__main__':
     # command = ['bash', '-c', 'grep -r chr > output.txt']
     doc = from_url(os.path.join(os.path.dirname(__file__), '../examples/bwa-mem.yml'))
-    tool, job = doc['tool'], doc['job']
+    bwa = json.load(open("../tests/test-data/BwaMem.json"))
+    tool = sbg_schema2json_schema(bwa["schema"])
+    job = doc['job']
     runner = DockerRunner(tool)
     print runner.run_job(job)
