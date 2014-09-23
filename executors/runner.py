@@ -85,11 +85,11 @@ class DockerRunner(Runner):
         try:
             cont = self.docker_client.create_container_from_config(config)
         except APIError:
-            logging.ERROR('Image %s not found:' % self.image_id)
+            logging.error('Image %s not found:' % self.image_id)
         try:
             self.docker_client.start(container=cont, binds=binds)
         except APIError:
-            logging.ERROR('Failed to run container')
+            logging.error('Failed to run container')
         return cont
 
     def run_job(self, job, job_id=None):
@@ -123,7 +123,7 @@ if __name__=='__main__':
     # command = ['bash', '-c', 'grep -r chr > output.txt']
     doc = from_url(os.path.join(os.path.dirname(__file__), '../examples/bwa-mem.yml'))
     bwa = json.load(open("../tests/test-data/BwaMem.json"))
-    tool = sbg_schema2json_schema(bwa["schema"])
+    tool = sbg_schema2json_schema(bwa)
     job = doc['job']
     runner = DockerRunner(tool)
     print runner.run_job(job)
