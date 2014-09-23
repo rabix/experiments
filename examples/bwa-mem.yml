@@ -1,5 +1,6 @@
 # JobOrder
 job:
+  app: http://example.com/app.json
   inputs: # dict that matches the schema defined in tool
     reference:
       path: hg19.fasta

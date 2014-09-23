@@ -98,13 +98,13 @@ def cliche_job2sbg_job(doc):
     sbg_resources = {"$$type": "resources"}
     allocated_resources = doc["allocatedResources"]
 
-    sbg_resources["high_io"] = allocated_resources["netrork"]
+    sbg_resources["high_io"] = allocated_resources["network"]
     sbg_resources["cpu"] = allocated_resources["cpu"]
-    sbg_resources["mem_mb"] = allocatedResources["mem"]
+    sbg_resources["mem_mb"] = allocated_resources["mem"]
 
     sbg_job["resources"] = sbg_resources
 
-    for k, v in doc["inputs"].items:
+    for k, v in doc["inputs"].items():
         if isinstance(v, dict) and "path" in v:
             sbg_job["args"]["$inputs"][k] = v["path"]
         else:
@@ -114,10 +114,16 @@ def cliche_job2sbg_job(doc):
 
 
 if __name__ == "__main__":
+    from os.path import join, dirname
     import json
+    import yaml
     import jsonschema
     bwa = json.load(open("/home/luka/devel/rabix/rabix/tests/apps/BwaMem.json"))
     bwa_schm = sbg_schema2json_schema(bwa["schema"])
     print(json.dumps(bwa_schm, indent=2))
     jsonschema.Draft4Validator.check_schema(bwa_schm)
+
+    job_path = join(dirname(__file__), "../examples/bwa-mem.yml")
+    job = yaml.load(open(job_path))
+    print(json.dumps(cliche_job2sbg_job(job["job"]), indent=2))
 
