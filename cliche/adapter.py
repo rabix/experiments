@@ -2,6 +2,7 @@ import os
 import json
 import copy
 import operator
+import glob
 
 import execjs
 from jsonschema import Draft4Validator
@@ -23,6 +24,10 @@ def evaluate(expression, job, context):
         '''
     exp = exp_tpl % (json.dumps(job), json.dumps(context), expression)
     return execjs.eval(exp)
+
+
+def intersect_dicts(d1, d2):
+    return {k: v for k, v in d1.iteritems() if v == d2.get(k)}
 
 
 class Argument(object):
@@ -134,8 +139,8 @@ class Adapter(object):
             self.base_cmd = self.base_cmd.split(' ')
         self.stdout = self.adapter.get('stdout')
         self.args = self.adapter.get('args', [])
-        self.input_schema = self.tool.get('inputs')
-        self.output_schema = self.tool.get('outputs')
+        self.input_schema = self.tool.get('inputs', {})
+        self.output_schema = self.tool.get('outputs', {})
 
     def _arg_list_and_stdin(self, job):
         adapter_args = [Argument(job, self._get_value(a, job), {}, a) for a in self.args]
@@ -152,12 +157,13 @@ class Adapter(object):
     def cmd_line(self, job):
         job = self._resolve_job_resources(job)
         arg_list, stdin = self._arg_list_and_stdin(job)
-        stdout = self.stdout
-        if isinstance(stdout, dict):
-            stdout = evaluate(stdout['$expr'], job, None)
+        stdout = self._get_stdout_name(job)
         stdin = ['<', stdin] if stdin else []
         stdout = ['>', stdout] if stdout else []
         return ' '.join(map(unicode, self.base_cmd + arg_list + stdin + stdout))
+
+    def _get_stdout_name(self, job):
+        return self.stdout if not isinstance(self.stdout, basestring) else evaluate(self.stdout['$expr'], job, None)
 
     def _get_value(self, arg, job):
         value = arg.get('value')
@@ -166,6 +172,34 @@ class Adapter(object):
         if isinstance(value, dict) and '$expr' in value:
             value = evaluate(value['$expr'], job, None)
         return value
+
+    def _make_meta(self, file, adapter, job):
+        meta, result = adapter.get('meta', {}), {}
+        inherit = meta.pop('$inherit')
+        if inherit:
+            src = job['inputs'].get(inherit)
+            if src and isinstance(src, list):
+                result = reduce(intersect_dicts, [x.get('meta', {}) for x in src]) if len(src) > 1 else src[0].get('meta', {})
+            elif src:
+                result = src.get('meta', {})
+        result.update(**meta)
+        for k, v in result.iteritems():
+            if isinstance(v, dict) and '$expr' in v:
+                result[k] = evaluate(v['$expr'], job, file)
+        return result
+
+    def get_outputs(self, job_dir, job):
+        result, outs = {}, self.output_schema.get('properties', {})
+        for k, v in outs.iteritems():
+            adapter = v['adapter']
+            if adapter.get('stdout'):
+                files = [os.path.join(job_dir, self._get_stdout_name(job))]
+            else:
+                files = glob.glob(os.path.join(job_dir, adapter['glob']))
+            result[k] = [{'path': p, 'meta': self._make_meta(p, adapter, job)} for p in files]
+            if adapter['type'] != 'array':
+                result[k] = result[k][0] if result[k] else None
+        return result
 
 
 def cmd_line(doc_path, tool_key='tool', job_key='job'):
