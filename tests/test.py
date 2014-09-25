@@ -28,3 +28,4 @@ def test_provide_image_good_repo():
     tool = copy.deepcopy(mock_app_good_repo)
     runner = DockerRunner(tool['tool'])
     runner.provide_image()
+

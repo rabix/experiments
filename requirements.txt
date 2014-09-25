@@ -3,3 +3,4 @@ jsonschema==2.3.0
 PyYaml==3.11
 requests
 docker-py
+PyExecJS

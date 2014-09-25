@@ -3,29 +3,12 @@ job:
   app: http://example.com/app.json
   inputs: # dict that matches the schema defined in tool
     reference:
-      path: hg19.fasta
+      path: chr20.fa
       size: 123
       checksum: sha1$hash
-      secondaryFiles:
-        bwa_index:
-          path: hg19.bwa_index
-          size: 123
-          checksum: md5$hash
-        .fai:
-          path: hg19.fasta.fai
-          size: 123
-          checksum: md5$hash
-        dict:
-          path: hg19.dict
-          size: 123
-          checksum: md5$hash
     reads:
-      - path: sample_pe1.fq
-        size: 123
-        checksum: md5$hash
-      - path: sample_pe2.fq
-        size: 123
-        checksum: md5$hash
+      - path: example_human_Illumina.pe_1.fastq
+      - path: example_human_Illumina.pe_2.fastq
     min_std_max_min: [1, 2, 3, 4]
     minimum_seed_length: 3
   platform: "http://example.org/my_platform/v1"
@@ -62,7 +45,7 @@ tool:
         type: file
         adapter:
           order: 2
-          transform: os.path.splitext(self['path'])[0]
+  #        transform: self.path.split('.').reverse().splice(1).reverse().join('.')
       reads:
         type: array
         minItems: 1

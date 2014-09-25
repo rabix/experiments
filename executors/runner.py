@@ -4,6 +4,7 @@ import logging
 import uuid
 import stat
 import json
+import pipes
 from docker.errors import APIError
 from cliche.adapter import Adapter, from_url
 from cliche.transforms import sbg_schema2json_schema
@@ -42,13 +43,13 @@ class DockerRunner(Runner):
 
     def make_config(self, image, command):
         config = {'Image': image,
-                'Cmd': command,
-                'AttachStdin': False,
-                'AttachStdout': False,
-                'AttachStderr': False,
-                'Tty': False,
-                'Privileged': False,
-                'Memory': 0}
+                  'Cmd': command,
+                  'AttachStdin': False,
+                  'AttachStdout': False,
+                  'AttachStderr': False,
+                  'Tty': False,
+                  'Privileged': False,
+                  'Memory': 0}
         return config
 
     def inspect(self, container):
@@ -70,6 +71,17 @@ class DockerRunner(Runner):
         self.wait(container)
         return self.docker_client.logs(container, stdout=True, stderr=False,
                                        stream=False, timestamps=False)
+
+    def pipe_stdout(self, container, pipe):
+        stream = self.docker_client.logs(container, stdout=True, stream=True)
+        while True:
+            try:
+                pipe.write(stream.next())
+            except StopIteration:
+                pipe.close()
+                return
+            else:
+                raise RuntimeError
 
     def get_stderr(self, container):
         self.wait(container)
@@ -95,6 +107,7 @@ class DockerRunner(Runner):
     def run(self, command, **kwargs):
         volumes = {self.WORKING_DIR: {}}
         binds = {self.working_dir: self.WORKING_DIR}
+        print command
         config = self.make_config(self.image_id, command)
         config['Volumes'] = volumes
         config['WorkingDir'] = self.WORKING_DIR
@@ -119,16 +132,11 @@ class DockerRunner(Runner):
         os.chmod(job_dir, os.stat(job_dir).st_mode | stat.S_IROTH |
                  stat.S_IWOTH | stat.S_IXOTH)
         adapter = Adapter(self.tool)
-        container = self.run(['bash', '-c', adapter.cmd_line(job)],
-                             WorkingDir='/'.join([self.WORKING_DIR, job_dir]))
-        if self.is_success(container):
-            outputs = adapter.output_schema
-            for out in outputs['properties']:
-                outputs['properties'][out]['adapter']['glob'] = \
-                    '/'.join([job_dir, outputs['properties'][out]['adapter']['glob']])
-        else:
-            outputs = {"err": "%s" %self.get_stderr(container)}
-        return outputs
+        container = self.run(['bash', '-c', adapter.cmd_line(job)])
+                             #WorkingDir='/'.join([self.WORKING_DIR, job_dir]))
+        if not self.is_success(container):
+            raise RuntimeError("err %s" % self.get_stderr(container))
+        return adapter.get_outputs(job_dir, job)
 
 
 class NativeRunner(Runner):
@@ -144,8 +152,8 @@ if __name__=='__main__':
     # command = ['bash', '-c', 'grep -r chr > output.txt']
     doc = from_url(os.path.join(os.path.dirname(__file__), '../examples/bwa-mem.yml'))
     bwa = json.load(open(os.path.join(os.path.dirname(__file__), "../tests/test-data/BwaMem.json")))
-    tool = sbg_schema2json_schema(bwa)
-    #tool, job = doc['tool'], doc['job']
+    #tool = sbg_schema2json_schema(bwa)
+    tool, job = doc['tool'], doc['job']
     job = doc['job']
     runner = DockerRunner(tool)
-    print runner.run_job(job)
+    print(runner.run_job(job))
