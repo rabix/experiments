@@ -4,10 +4,20 @@ import logging
 import uuid
 import stat
 import json
-import pipes
+import copy
 from docker.errors import APIError
 from cliche.adapter import Adapter, from_url
 from cliche.transforms import sbg_schema2json_schema
+
+
+
+class BindDict(dict):
+
+    def items(self):
+        ret = []
+        for k, v in self.iteritems():
+            ret.append((v, k))
+        return ret
 
 
 class Runner(object):
@@ -32,7 +42,7 @@ class Runner(object):
 
     def rnd_name(self):
         return str(uuid.uuid4())
-        #return '-'.join([uuid.uuid4(), self.tool.get('description')]) get name from DOAP
+        #return '-'.join([uuid.uuid4(), self.tool.get('description')]) get name DOAP
 
 
 class DockerRunner(Runner):
@@ -49,8 +59,38 @@ class DockerRunner(Runner):
                   'AttachStderr': False,
                   'Tty': False,
                   'Privileged': False,
-                  'Memory': 0}
+                  'Memory': 0
+                }
         return config
+
+    def volumes(self, job):
+        remaped_job = copy.deepcopy(job)
+        volumes = {}
+        binds = {}
+        is_single = lambda i: inputs[i]['type'] == 'directory' or inputs[i]['type'] == 'file'
+        is_array = lambda i: inputs[i]['type'] == 'array' and \
+                             (inputs[i]['items']['type'] == 'directory' or
+                              inputs[i]['items']['type'] == 'file')
+
+        inputs = self.tool.get('inputs', {}).get('properties')
+        input_values = remaped_job.get('inputs')
+        if inputs:
+            single = filter(is_single, [i for i in inputs])
+            lists = filter(is_array, [i for i in inputs])
+            for inp in single:
+                docker_dir = '/' + inp
+                dir_name, file_name = os.path.split(os.path.abspath(input_values[inp]['path']))
+                volumes[docker_dir] = {}
+                binds[docker_dir] = dir_name
+                remaped_job['inputs'][inp]['path'] = '/'.join([docker_dir, file_name])
+            for inp in lists:
+                for num, inv in enumerate(input_values[inp]):
+                    docker_dir = '/' + '/'.join([inp, str(num)])
+                    dir_name, file_name = os.path.split(os.path.abspath(inv['path']))
+                    volumes[docker_dir] = {}
+                    binds[docker_dir] = dir_name
+                    remaped_job['inputs'][inp][num]['path'] = '/'.join([docker_dir, file_name])
+            return volumes, BindDict(binds), remaped_job
 
     def inspect(self, container):
         return self.docker_client.inspect_container(container)
@@ -104,10 +144,9 @@ class DockerRunner(Runner):
                 return
             raise Exception('Image not found')
 
-    def run(self, command, **kwargs):
-        volumes = {self.WORKING_DIR: {}}
-        binds = {self.working_dir: self.WORKING_DIR}
-        print command
+    def run(self, command, vol=None, bind=None, **kwargs):
+        volumes = vol or {self.WORKING_DIR: {}}
+        binds = bind or {self.working_dir: self.WORKING_DIR}
         config = self.make_config(self.image_id, command)
         config['Volumes'] = volumes
         config['WorkingDir'] = self.WORKING_DIR
@@ -132,8 +171,13 @@ class DockerRunner(Runner):
         os.chmod(job_dir, os.stat(job_dir).st_mode | stat.S_IROTH |
                  stat.S_IWOTH | stat.S_IXOTH)
         adapter = Adapter(self.tool)
-        container = self.run(['bash', '-c', adapter.cmd_line(job)])
-                             #WorkingDir='/'.join([self.WORKING_DIR, job_dir]))
+        volumes, binds, remaped_job = self.volumes(job)
+        print adapter.cmd_line(remaped_job)
+        print volumes
+        print binds
+        container = self.run(['bash', '-c', adapter.cmd_line(remaped_job)],
+                             vol=volumes, bind=binds,
+                             WorkingDir='/'.join([self.WORKING_DIR, job_dir]))
         if not self.is_success(container):
             raise RuntimeError("err %s" % self.get_stderr(container))
         return adapter.get_outputs(job_dir, job)
@@ -149,7 +193,8 @@ class NativeRunner(Runner):
 
 
 if __name__=='__main__':
-    # command = ['bash', '-c', 'grep -r chr > output.txt']
+    #command = ['bash', '-c', 'grep -r chr > output.txt']
+    #command = ['/bin/bash', '-c', 'touch /reads/1/bla1']
     doc = from_url(os.path.join(os.path.dirname(__file__), '../examples/bwa-mem.yml'))
     bwa = json.load(open(os.path.join(os.path.dirname(__file__), "../tests/test-data/BwaMem.json")))
     #tool = sbg_schema2json_schema(bwa)
@@ -157,3 +202,8 @@ if __name__=='__main__':
     job = doc['job']
     runner = DockerRunner(tool)
     print(runner.run_job(job))
+    #print runner.get_stdout(runner.run(command))
+    # print d.items()
+    # print revitems.items()
+    #volumes, binds, remap_job = runner.volumes(job)
+    # print binds.items()
