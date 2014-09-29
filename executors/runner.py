@@ -172,15 +172,14 @@ class DockerRunner(Runner):
                  stat.S_IWOTH | stat.S_IXOTH)
         adapter = Adapter(self.tool)
         volumes, binds, remaped_job = self.volumes(job)
-        print adapter.cmd_line(remaped_job)
-        print volumes
-        print binds
+        volumes['/' + job_dir] = {}
+        binds['/' + job_dir]=os.path.abspath(job_dir)
         container = self.run(['bash', '-c', adapter.cmd_line(remaped_job)],
                              vol=volumes, bind=binds,
-                             WorkingDir='/'.join([self.WORKING_DIR, job_dir]))
+                             WorkingDir='/' + job_dir)
         if not self.is_success(container):
             raise RuntimeError("err %s" % self.get_stderr(container))
-        return adapter.get_outputs(job_dir, job)
+        return adapter.get_outputs(os.path.abspath(job_dir), job)
 
 
 class NativeRunner(Runner):
