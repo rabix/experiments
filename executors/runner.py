@@ -10,7 +10,6 @@ from cliche.adapter import Adapter, from_url
 from cliche.transforms import sbg_schema2json_schema
 
 
-
 class BindDict(dict):
 
     def items(self):

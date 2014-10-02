@@ -43,11 +43,13 @@ tool:
     properties:
       reference:
         type: file
+        required: Yes
         adapter:
           order: 2
   #        transform: self.path.split('.').reverse().splice(1).reverse().join('.')
       reads:
         type: array
+        required: Yes
         minItems: 1
         maxItems: 2
         items:

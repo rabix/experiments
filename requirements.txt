@@ -4,3 +4,4 @@ PyYaml==3.11
 requests
 docker-py
 PyExecJS
+docopt
