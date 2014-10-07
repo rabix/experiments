@@ -149,6 +149,7 @@ class DockerRunner(Runner):
         config = self.make_config(self.image_id, command)
         config['Volumes'] = volumes
         config['WorkingDir'] = self.WORKING_DIR
+        config['User'] = os.getuid()
         config.update(**kwargs)
         self.provide_image()
         try:

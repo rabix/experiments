@@ -16,7 +16,7 @@ TEMPLATE_JOB={
 
 USAGE='''
 Usage:
-    rabix run [-v] <tool> (--job=<job> [{inputs}] | {inputs})
+    rabix run [-v] (--job=<job> [--app=<app> {inputs}] | --app=<app> {inputs})
     rabix -h
 
 Options:
@@ -28,7 +28,6 @@ def make_tool_usage_string(tool):
     inputs = tool.get('inputs', {}).get('properties')
     usage_str = []
     for k, v in inputs.items():
-        arg = ''
         if v.get('type') == 'file':
             arg = '--%s=<%s_file>' % (k, k)
             usage_str.append(arg if v.get('required') else '[%s]' %arg)
@@ -58,24 +57,46 @@ def update_job(job, args):
     return job
 
 
+def update_paths():
+    pass
+
+
+def get_tool(args):
+    #rabix run [-v] (--job=<job> [--tool=<tool> {inputs}] | --tool=<tool> {inputs})
+    for inx, arg in enumerate(args):
+        if '--tool' in arg:
+            tool_url = arg.split('=')
+            if len(tool_url) == 2:
+                return from_url(tool_url[1]).get('tool')
+            else:
+                return from_url(args[inx+1]).get('tool')
+    for inx, arg in enumerate(args):
+        if '--job' in arg:
+            job_url = arg.split('=')
+            if len(job_url) == 2:
+                return from_url(job_url[1]).get('job', {}).get('tool')
+            else:
+                return from_url(args[inx+1]).get('job', {}).get('tool')
+
+
 def main():
     DOCOPT = USAGE
     if sys.argv[1] == 'run' and len(sys.argv) > 2:
-        tool = from_url(os.path.join(os.path.dirname(__file__), sys.argv[2])).get('tool')
+        print sys.argv
+        tool = get_tool(sys.argv)
         DOCOPT = make_tool_usage_string(tool)
-        pass
     try:
         args = docopt.docopt(DOCOPT, version=version)
         if args['run']:
             job = TEMPLATE_JOB
-            if args['--job']:
-                job_from_arg = from_url(os.path.join(os.path.dirname(__file__), sys.argv[2])).get('job')
-                job = update_job(job, job_from_arg)
+            # if args['--job']:
+            #     job_from_arg = from_url(os.path.join(os.path.dirname(__file__), sys.argv[2])).get('job')
+            #     job = update_job(job, job_from_arg)
             # inp = get_inputs(tool, args)
             # update_job(job, inp)
             print job
-            runner = DockerRunner(tool)
-            runner.run_job(job)
+            # runner = DockerRunner(tool)
+            # runner.run_job(job)
 
     except docopt.DocoptExit:
         print(DOCOPT)

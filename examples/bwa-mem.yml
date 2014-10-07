@@ -1,6 +1,7 @@
 # JobOrder
 job:
-  app: http://example.com/app.json
+  tool:
+    $ref: "#tool"
   inputs: # dict that matches the schema defined in tool
     reference:
       path: ../tests/test-data/chr20.fa
