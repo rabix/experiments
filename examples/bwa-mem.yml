@@ -84,6 +84,10 @@ tool:
           glob: output.sam
           streamable: Yes
   adapter:
+    enviroment:
+      - bwa: /bin/bwa
+    ports:
+      - 4222: 4223
     baseCmd: [bwa, mem]
     stdout: output.sam
     args:

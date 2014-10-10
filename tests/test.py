@@ -1,6 +1,7 @@
 import os
 import copy
 from executors.runner import DockerRunner, NativeRunner
+from executors.container import provide_image
 from nose.tools import nottest, raises
 from tests import mock_app_bad_repo, mock_app_good_repo
 from cliche.ref_resolver import from_url
@@ -9,7 +10,7 @@ from executors.cli import get_tool
 @nottest
 def test_docker_runner():
     command = ['bash', '-c', 'grep -r chr > output.txt']
-    runner = DockerRunner()
+    runner = DockerRunner(tool=mock_app_good_repo)
     runner.run(command)
     pass
 

@@ -114,7 +114,10 @@
                     "adapter": {
                         "stdout": "Yes",
                         "glob": "output.sam",
-                        "streamable": "Yes"
+                        "streamable": "Yes",
+                        "meta": {
+                            "file_type": "sam"
+                        }
                     }
                 }
             }

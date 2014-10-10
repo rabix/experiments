@@ -80,6 +80,8 @@ tool:
       sam:
         type: file
         adapter:
+          meta:
+            file_type: sam
           stdout: Yes
           glob: output.sam
           streamable: Yes

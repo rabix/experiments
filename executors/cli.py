@@ -3,6 +3,7 @@ import docopt
 import six
 import sys
 from executors import __version__ as version
+from validations import validate_inputs
 from executors.runner import DockerRunner
 from cliche.adapter import from_url
 
@@ -16,7 +17,7 @@ TEMPLATE_JOB={
 
 USAGE='''
 Usage:
-    rabix run [-v] (--job=<job> [--app=<app> {inputs}] | --app=<app> {inputs})
+    rabix run [-v] (--job=<job> [--tool=<tool> {inputs}] | --tool=<tool> {inputs})
     rabix -h
 
 Options:
@@ -44,25 +45,21 @@ def get_inputs(tool, args):
         val = args.get('--' + k)
         if val:
             if isinstance(val, list):
-                inp[k]=[]
+                inp[k] = []
                 for v in val:
                     inp[k].append({'path': v})
             else:
                 inp[k] = {'path': val}
-    print inp
     return {'inputs': inp}
 
-def update_job(job, args):
-    job.update(args)
+
+def update_paths(job, inputs): # tested
+    for inp in inputs['inputs'].keys():
+        job['inputs'][inp] = inputs['inputs'][inp]
     return job
 
 
-def update_paths():
-    pass
-
-
 def get_tool(args):
-    #rabix run [-v] (--job=<job> [--tool=<tool> {inputs}] | --tool=<tool> {inputs})
     for inx, arg in enumerate(args):
         if '--tool' in arg:
             tool_url = arg.split('=')
@@ -81,28 +78,32 @@ def get_tool(args):
 
 def main():
     DOCOPT = USAGE
+    if len(sys.argv) == 1:
+        print(DOCOPT)
+        return
     if sys.argv[1] == 'run' and len(sys.argv) > 2:
-        print sys.argv
         tool = get_tool(sys.argv)
+        if not tool:
+            raise Exception('Need to specify tool')
         DOCOPT = make_tool_usage_string(tool)
     try:
         args = docopt.docopt(DOCOPT, version=version)
         if args['run']:
             job = TEMPLATE_JOB
-            # if args['--job']:
-            #     job_from_arg = from_url(os.path.join(os.path.dirname(__file__), sys.argv[2])).get('job')
-            #     job = update_job(job, job_from_arg)
-            # inp = get_inputs(tool, args)
-            # update_job(job, inp)
-            print job
-            # runner = DockerRunner(tool)
-            # runner.run_job(job)
+            if args['--job']:
+                job_from_arg = from_url(args.get('--job', {})).get('job')
+                job_from_arg.pop('tool')
+                job = job_from_arg
+            inp = get_inputs(tool, args)
+            job = update_paths(job, inp)
+            validate_inputs(tool, job)
+            runner = DockerRunner(tool)
+            print runner.run_job(job)
 
     except docopt.DocoptExit:
         print(DOCOPT)
         return
-    print args
 
 
-if __name__=='__main__':
+if __name__ == '__main__':
     main()
